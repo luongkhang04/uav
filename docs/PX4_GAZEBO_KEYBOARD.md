@@ -170,6 +170,32 @@ ros2 run uav_backend_gazebo_px4 px4_offboard_adapter
 
 ## 4. Keyboard Control
 
+Keyboard hold/release control reads Linux keyboard event devices so it can detect
+when keys are released and can combine multiple held keys. Make sure your user
+can read `/dev/input/event*`:
+
+```bash
+groups
+sudo usermod -aG input $USER
+sudo reboot
+```
+
+After reboot, `groups` should include `input`.
+
+Keyboard input modes:
+
+```text
+Local terminal on ROS machine:
+  Uses /dev/input/event*. Supports true key press/release and multiple held
+  movement keys at the same time, such as w+e for forward plus yaw right.
+
+SSH terminal:
+  Uses terminal fallback. Lifecycle keys work, and movement works through key
+  repeat, but SSH cannot reliably report multiple simultaneous held keys or true
+  key-release events. Release is approximated by a short timeout after key
+  repeat stops. Use local mode for proper multi-key flying.
+```
+
 Run keyboard control in an interactive terminal:
 
 ```bash
@@ -184,35 +210,30 @@ ros2 run uav_control keyboard_cmd_vel
 Keyboard mapping:
 
 ```text
-o      Offboard + Arm
-p      Land
-k      Disarm
+1           Offboard + Arm
+2           Land
+3           Disarm
 
-w      Forward
-s      Backward
-a      Left
-d      Right
-r      Up
-f      Down
-j      Yaw left
-l      Yaw right
+hold w/s    Forward / Backward
+hold a/d    Left / Right
+hold r/f    Up / Down
+hold q/e    Yaw left / Yaw right
 
-space  Stop
-+      Increase speed
--      Decrease speed
-h      Print help
-x      Exit
+Up arrow    Increase speed
+Down arrow  Decrease speed
+4           Print help
+x           Exit
 ```
 
 Recommended basic test:
 
 ```text
-1. Press o to enter Offboard and arm.
-2. Press r for 1-2 seconds to climb.
-3. Press space to stop vertical motion.
-4. Press w/a/s/d to test horizontal motion.
-5. Press p to land.
-6. Press k to disarm after landing.
+1. Press 1 to enter Offboard and arm.
+2. Hold r for 1-2 seconds to climb, then release r to stop climbing.
+3. Hold w/a/s/d to test horizontal motion, then release to stop that axis.
+4. Hold q/e to test yaw.
+5. Press 2 to land.
+6. Press 3 to disarm after landing.
 ```
 
 ## 5. State Monitor
@@ -225,7 +246,7 @@ deactivate 2>/dev/null || true
 source /opt/ros/$ROS_DISTRO/setup.bash
 source install/setup.bash
 
-ros2 run uav_backend_gazebo_px4 state_monitor
+ros2 run uav_state state_monitor
 ```
 
 Expected output:
@@ -393,14 +414,14 @@ For control development:
 ```bash
 ros2 launch uav_bringup px4_gazebo_depth.launch.py model:=gz_x500 start_bridge:=false
 ros2 run uav_control keyboard_cmd_vel
-ros2 run uav_backend_gazebo_px4 state_monitor
+ros2 run uav_state state_monitor
 ```
 
 For depth/perception development:
 
 ```bash
 ros2 launch uav_bringup px4_gazebo_depth.launch.py
-ros2 run uav_backend_gazebo_px4 state_monitor
+ros2 run uav_state state_monitor
 ```
 
 For future RL:

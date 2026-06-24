@@ -173,7 +173,34 @@ export GALLIUM_DRIVER=llvmpipe
 export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
 ```
 
-## 7. Build the ROS 2 Workspace
+## 7. Keyboard Permission for Hold/Release Control
+
+The keyboard command node reads Linux input events so it can detect key release
+and multiple held keys. Add your user to the `input` group:
+
+```bash
+sudo usermod -aG input $USER
+sudo reboot
+```
+
+After reboot, check:
+
+```bash
+groups
+```
+
+Expected groups include:
+
+```text
+input
+```
+
+This full hold/release mode is for a local terminal on the machine running ROS.
+When using SSH, the keyboard node falls back to terminal input: lifecycle keys
+still work, but true simultaneous held movement keys such as `w+e` are not
+reliable because SSH terminals do not send physical key release state.
+
+## 8. Build the ROS 2 Workspace
 
 Build outside `px4-venv`:
 
@@ -187,7 +214,7 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-## 8. Verify ROS Packages
+## 9. Verify ROS Packages
 
 ```bash
 ros2 pkg list | grep uav
@@ -211,7 +238,7 @@ ros2 run uav_backend_gazebo_px4 state_monitor
 
 Use `Ctrl+C` to stop test nodes.
 
-## 9. Common Build Issues
+## 10. Common Build Issues
 
 ### PX4 is being built by colcon
 
