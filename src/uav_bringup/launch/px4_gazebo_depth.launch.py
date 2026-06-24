@@ -112,8 +112,8 @@ def generate_launch_description():
 
     adapter = Node(
         package="uav_backend_gazebo_px4",
-        executable="px4_offboard_adapter",
-        name="px4_offboard_adapter",
+        executable="px4_backend_adapter",
+        name="px4_backend_adapter",
         output="screen",
         emulate_tty=True,
         condition=IfCondition(start_adapter),

@@ -6,18 +6,15 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
-from sensor_msgs.msg import Image
-from px4_msgs.msg import VehicleOdometry, SensorCombined
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import Imu, Image
 
 
-def yaw_from_quat_wxyz(q):
-    if q is None or len(q) < 4:
-        return 0.0
-
-    w = float(q[0])
-    x = float(q[1])
-    y = float(q[2])
-    z = float(q[3])
+def yaw_from_ros_quat(q):
+    x = float(q.x)
+    y = float(q.y)
+    z = float(q.z)
+    w = float(q.w)
 
     return math.atan2(
         2.0 * (w * z + x * y),
@@ -26,10 +23,25 @@ def yaw_from_quat_wxyz(q):
 
 
 class StateMonitor(Node):
+    """
+    Backend-independent UAV state monitor.
+
+    Subscribes only to normalized /uav topics:
+
+      /uav/odom
+      /uav/imu
+      /uav/camera/depth/image
+    """
+
     def __init__(self):
         super().__init__("uav_state_monitor")
 
+        self.declare_parameter("odom_topic", "/uav/odom")
+        self.declare_parameter("imu_topic", "/uav/imu")
         self.declare_parameter("depth_topic", "/uav/camera/depth/image")
+
+        self.odom_topic = self.get_parameter("odom_topic").value
+        self.imu_topic = self.get_parameter("imu_topic").value
         self.depth_topic = self.get_parameter("depth_topic").value
 
         self.odom = None
@@ -42,34 +54,16 @@ class StateMonitor(Node):
 
         qos = qos_profile_sensor_data
 
-        self.create_subscription(
-            VehicleOdometry,
-            "/fmu/out/vehicle_odometry",
-            self.odom_cb,
-            qos,
-        )
-
-        self.create_subscription(
-            SensorCombined,
-            "/fmu/out/sensor_combined",
-            self.imu_cb,
-            qos,
-        )
-
-        self.create_subscription(
-            Image,
-            self.depth_topic,
-            self.depth_cb,
-            qos,
-        )
+        self.create_subscription(Odometry, self.odom_topic, self.odom_cb, qos)
+        self.create_subscription(Imu, self.imu_topic, self.imu_cb, qos)
+        self.create_subscription(Image, self.depth_topic, self.depth_cb, qos)
 
         self.timer = self.create_timer(1.0, self.print_status)
 
-        self.get_logger().info("State monitor started.")
-        self.get_logger().info("Subscribing with sensor_data QoS:")
-        self.get_logger().info("  /fmu/out/vehicle_odometry")
-        self.get_logger().info("  /fmu/out/sensor_combined")
-        self.get_logger().info(f"  {self.depth_topic}")
+        self.get_logger().info("Generic UAV state monitor started.")
+        self.get_logger().info(f"odom : {self.odom_topic}")
+        self.get_logger().info(f"imu  : {self.imu_topic}")
+        self.get_logger().info(f"depth: {self.depth_topic}")
 
     def odom_cb(self, msg):
         self.odom = msg
@@ -94,31 +88,32 @@ class StateMonitor(Node):
         )
 
         if self.odom is not None:
-            p = self.odom.position
-            v = self.odom.velocity
-            yaw = yaw_from_quat_wxyz(self.odom.q)
+            p = self.odom.pose.pose.position
+            v = self.odom.twist.twist.linear
+            yaw = yaw_from_ros_quat(self.odom.pose.pose.orientation)
 
             lines.append(
-                f"PX4 NED pos: "
-                f"N={p[0]: .2f}, E={p[1]: .2f}, D={p[2]: .2f} | "
-                f"vel: vN={v[0]: .2f}, vE={v[1]: .2f}, vD={v[2]: .2f} | "
+                f"pose ENU: "
+                f"x={p.x: .2f}, y={p.y: .2f}, z={p.z: .2f} | "
+                f"vel body FLU: "
+                f"forward={v.x: .2f}, left={v.y: .2f}, up={v.z: .2f} | "
                 f"yaw={math.degrees(yaw): .1f} deg"
             )
         else:
-            lines.append("PX4 odometry: no data yet")
+            lines.append(f"Odometry: no data yet on {self.odom_topic}")
 
         if self.imu is not None:
-            gyro = self.imu.gyro_rad
-            accel = self.imu.accelerometer_m_s2
+            g = self.imu.angular_velocity
+            a = self.imu.linear_acceleration
 
             lines.append(
                 f"IMU gyro(rad/s): "
-                f"[{gyro[0]: .3f}, {gyro[1]: .3f}, {gyro[2]: .3f}] | "
+                f"[{g.x: .3f}, {g.y: .3f}, {g.z: .3f}] | "
                 f"accel(m/s^2): "
-                f"[{accel[0]: .3f}, {accel[1]: .3f}, {accel[2]: .3f}]"
+                f"[{a.x: .3f}, {a.y: .3f}, {a.z: .3f}]"
             )
         else:
-            lines.append("IMU: no data yet")
+            lines.append(f"IMU: no data yet on {self.imu_topic}")
 
         if self.depth is not None:
             lines.append(

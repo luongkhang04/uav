@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'uav_backend_gazebo_px4'
+package_name = 'uav_state'
 
 setup(
     name=package_name,
@@ -14,12 +14,13 @@ setup(
     zip_safe=True,
     maintainer='khang',
     maintainer_email='khang@example.com',
-    description='Gazebo PX4 backend adapter and monitor.',
+    description='Backend-independent UAV state monitoring tools.',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'px4_backend_adapter = uav_backend_gazebo_px4.px4_backend_adapter:main',
+            'state_monitor = uav_state.state_monitor:main',
+            'state_monitor_gui = uav_state.state_monitor_gui:main',
         ],
     },
 )
