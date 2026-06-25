@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import math
 import os
 import select
 import struct
@@ -29,8 +30,10 @@ PX4 lifecycle:
   3 : Disarm
 
 Speed:
-  Up arrow   : increase speed
-  Down arrow : decrease speed
+  Up arrow    : increase speed
+  Down arrow  : decrease speed
+  Right arrow : increase yaw rate
+  Left arrow  : decrease yaw rate
 
 Other:
   4 : print help
@@ -62,10 +65,17 @@ KEY_CODES = {
     33: 'f',
     45: 'x',
     103: 'up',
+    105: 'left',
+    106: 'right',
     108: 'down',
 }
 
 MOVEMENT_KEYS = {'w', 's', 'a', 'd', 'r', 'f', 'q', 'e'}
+PX4_MAX_XY_SPEED = 12.0
+PX4_MAX_Z_SPEED_UP = 3.0
+PX4_MAX_Z_SPEED_DOWN = 1.5
+MAX_YAW_RATE = 1.0
+MIN_YAW_RATE = 0.1
 
 
 class LinuxKeyboard:
@@ -232,6 +242,14 @@ class TerminalKeyboard:
                     events.append(('down', KEY_PRESS))
                     index += 3
                     continue
+                if sequence in {b'\x1b[C', b'\x1bOC'}:
+                    events.append(('right', KEY_PRESS))
+                    index += 3
+                    continue
+                if sequence in {b'\x1b[D', b'\x1bOD'}:
+                    events.append(('left', KEY_PRESS))
+                    index += 3
+                    continue
 
                 index += 1
                 continue
@@ -269,9 +287,10 @@ class KeyboardCmdVel(Node):
         self.land_client = self.create_client(Trigger, '/uav/land')
         self.disarm_client = self.create_client(Trigger, '/uav/disarm')
 
-        self.speed_xy = 1.0
-        self.speed_z = 0.5
-        self.yaw_rate = 0.6
+        self.speed_xy = 8.0
+        self.speed_z_up = 2.0
+        self.speed_z_down = 1.0
+        self.yaw_rate = 0.5
 
         self.cmd = TwistStamped()
         self.cmd.header.frame_id = 'base_link'
@@ -315,17 +334,25 @@ class KeyboardCmdVel(Node):
         self.cmd = TwistStamped()
         self.cmd.header.frame_id = 'base_link'
 
-        self.cmd.twist.linear.x = (
+        vx = (
             self.speed_xy * int('w' in self.active_keys)
             - self.speed_xy * int('s' in self.active_keys)
         )
-        self.cmd.twist.linear.y = (
+        vy = (
             self.speed_xy * int('a' in self.active_keys)
             - self.speed_xy * int('d' in self.active_keys)
         )
+        xy_norm = math.hypot(vx, vy)
+        if xy_norm > PX4_MAX_XY_SPEED and xy_norm > 1e-6:
+            scale = PX4_MAX_XY_SPEED / xy_norm
+            vx *= scale
+            vy *= scale
+
+        self.cmd.twist.linear.x = vx
+        self.cmd.twist.linear.y = vy
         self.cmd.twist.linear.z = (
-            self.speed_z * int('r' in self.active_keys)
-            - self.speed_z * int('f' in self.active_keys)
+            self.speed_z_up * int('r' in self.active_keys)
+            - self.speed_z_down * int('f' in self.active_keys)
         )
         self.cmd.twist.angular.z = (
             self.yaw_rate * int('q' in self.active_keys)
@@ -333,20 +360,36 @@ class KeyboardCmdVel(Node):
         )
 
     def increase_speed(self):
-        self.speed_xy = min(self.speed_xy + 0.2, 5.0)
-        self.speed_z = min(self.speed_z + 0.1, 2.0)
+        self.speed_xy = min(self.speed_xy + 0.8, PX4_MAX_XY_SPEED)
+        self.speed_z_up = min(self.speed_z_up + 0.2, PX4_MAX_Z_SPEED_UP)
+        self.speed_z_down = min(self.speed_z_down + 0.1, PX4_MAX_Z_SPEED_DOWN)
         self.update_cmd_from_active_keys()
         self.get_logger().info(
-            f'speed_xy={self.speed_xy:.1f}, speed_z={self.speed_z:.1f}'
+            f'speed_xy={self.speed_xy:.1f}, '
+            f'speed_z_up={self.speed_z_up:.1f}, '
+            f'speed_z_down={self.speed_z_down:.1f}'
         )
 
     def decrease_speed(self):
-        self.speed_xy = max(self.speed_xy - 0.2, 0.2)
-        self.speed_z = max(self.speed_z - 0.1, 0.1)
+        self.speed_xy = max(self.speed_xy - 0.8, 0.8)
+        self.speed_z_up = max(self.speed_z_up - 0.2, 0.2)
+        self.speed_z_down = max(self.speed_z_down - 0.1, 0.1)
         self.update_cmd_from_active_keys()
         self.get_logger().info(
-            f'speed_xy={self.speed_xy:.1f}, speed_z={self.speed_z:.1f}'
+            f'speed_xy={self.speed_xy:.1f}, '
+            f'speed_z_up={self.speed_z_up:.1f}, '
+            f'speed_z_down={self.speed_z_down:.1f}'
         )
+
+    def increase_yaw_rate(self):
+        self.yaw_rate = min(self.yaw_rate + 0.1, MAX_YAW_RATE)
+        self.update_cmd_from_active_keys()
+        self.get_logger().info(f'yaw_rate={self.yaw_rate:.1f}')
+
+    def decrease_yaw_rate(self):
+        self.yaw_rate = max(self.yaw_rate - 0.1, MIN_YAW_RATE)
+        self.update_cmd_from_active_keys()
+        self.get_logger().info(f'yaw_rate={self.yaw_rate:.1f}')
 
     def handle_key_event(self, key, value):
         if key in MOVEMENT_KEYS:
@@ -385,6 +428,14 @@ class KeyboardCmdVel(Node):
 
         if key == 'down':
             self.decrease_speed()
+            return False
+
+        if key == 'right':
+            self.increase_yaw_rate()
+            return False
+
+        if key == 'left':
+            self.decrease_yaw_rate()
             return False
 
         return key == 'x'

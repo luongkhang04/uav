@@ -19,6 +19,10 @@ from px4_msgs.msg import (
     SensorCombined,
 )
 
+PX4_MAX_XY_SPEED = 12.0
+PX4_MAX_Z_SPEED_UP = 3.0
+PX4_MAX_Z_SPEED_DOWN = 1.5
+
 
 def clamp(x, lo, hi):
     return max(lo, min(hi, x))
@@ -96,16 +100,25 @@ class PX4BackendAdapter(Node):
         self.declare_parameter("odom_topic", "/uav/odom")
         self.declare_parameter("imu_topic", "/uav/imu")
 
-        self.declare_parameter("max_xy_speed", 2.0)
-        self.declare_parameter("max_z_speed", 1.0)
+        self.declare_parameter('max_xy_speed', PX4_MAX_XY_SPEED)
+        self.declare_parameter('max_z_speed_up', PX4_MAX_Z_SPEED_UP)
+        self.declare_parameter('max_z_speed_down', PX4_MAX_Z_SPEED_DOWN)
+        self.declare_parameter('max_z_speed', -1.0)
         self.declare_parameter("max_yaw_rate", 1.0)
 
         self.cmd_topic = self.get_parameter("cmd_topic").value
         self.odom_topic = self.get_parameter("odom_topic").value
         self.imu_topic = self.get_parameter("imu_topic").value
 
-        self.max_xy_speed = float(self.get_parameter("max_xy_speed").value)
-        self.max_z_speed = float(self.get_parameter("max_z_speed").value)
+        self.max_xy_speed = float(self.get_parameter('max_xy_speed').value)
+        self.max_z_speed_up = float(self.get_parameter('max_z_speed_up').value)
+        self.max_z_speed_down = float(
+            self.get_parameter('max_z_speed_down').value
+        )
+        max_z_speed = float(self.get_parameter('max_z_speed').value)
+        if max_z_speed > 0.0:
+            self.max_z_speed_up = max_z_speed
+            self.max_z_speed_down = max_z_speed
         self.max_yaw_rate = float(self.get_parameter("max_yaw_rate").value)
 
         self.latest_cmd = TwistStamped()
@@ -320,7 +333,7 @@ class PX4BackendAdapter(Node):
             forward *= scale
             left *= scale
 
-        up = clamp(up, -self.max_z_speed, self.max_z_speed)
+        up = clamp(up, -self.max_z_speed_down, self.max_z_speed_up)
         yaw_left = clamp(yaw_left, -self.max_yaw_rate, self.max_yaw_rate)
 
         # ROS body FLU -> PX4 body FRD.
