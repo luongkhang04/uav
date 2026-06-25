@@ -117,7 +117,7 @@ SSH terminal:
 
 ## 5. State Monitor
 
-Run:
+Run the terminal monitor:
 
 ```bash
 cd ~/uav
@@ -138,10 +138,17 @@ IMU gyro(rad/s): ...
 Depth image: WIDTHxHEIGHT, encoding=...
 ```
 
-If using `gz_x500` instead of `gz_x500_depth`, depth will stay:
+Or run the GUI monitor from a desktop session:
 
-```text
-depth=0 Hz
+```bash
+cd ~/uav
+deactivate 2>/dev/null || true
+source /opt/ros/$ROS_DISTRO/setup.bash
+source install/setup.bash
+
+ros2 run uav_state state_monitor_gui
 ```
 
-This is expected because `gz_x500` has no depth camera.
+The GUI subscribes to odometry, IMU, depth image, and RGB image topics and opens
+an OpenCV window named `UAV State Monitor`. Over SSH, use X forwarding or run
+the terminal `state_monitor` instead.

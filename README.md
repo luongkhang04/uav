@@ -259,7 +259,7 @@ ros2 run uav_control keyboard_cmd_vel
 Optional state monitor:
 
 ```bash
-ros2 run uav_state state_monitor
+ros2 run uav_state state_monitor_gui
 ```
 
 ## Current Status
