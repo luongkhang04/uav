@@ -16,7 +16,11 @@ def generate_launch_description():
     px4_venv = LaunchConfiguration("px4_venv")
     model = LaunchConfiguration("model")
     world = LaunchConfiguration("world")
+
+    # Default: GUI mode.
+    # Set headless:=true only when running over SSH/headless server.
     headless = LaunchConfiguration("headless")
+
     software_render = LaunchConfiguration("software_render")
 
     start_agent = LaunchConfiguration("start_agent")
@@ -45,25 +49,24 @@ def generate_launch_description():
             "bash",
             "-lc",
             [
-                "source ",
-                px4_venv,
-                "/bin/activate && ",
-                "cd ",
-                px4_dir,
-                " && ",
-                'if [ "',
-                software_render,
-                '" = "true" ]; then ',
+                "source ", px4_venv, "/bin/activate && ",
+                "cd ", px4_dir, " && ",
+
+                # Optional software rendering.
+                'if [ "', software_render, '" = "true" ]; then ',
                 "export LIBGL_ALWAYS_SOFTWARE=1; ",
                 "export GALLIUM_DRIVER=llvmpipe; ",
                 "export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe; ",
                 "fi; ",
-                "PX4_GZ_WORLD=",
-                world,
-                " HEADLESS=",
-                headless,
-                " make px4_sitl ",
-                model,
+
+                # GUI by default. Only export HEADLESS=1 when requested.
+                'if [ "', headless, '" = "true" ] || [ "', headless, '" = "1" ]; then ',
+                "export HEADLESS=1; ",
+                "else ",
+                "unset HEADLESS; ",
+                "fi; ",
+
+                "PX4_GZ_WORLD=", world, " make px4_sitl ", model,
             ],
         ],
         name="px4_gazebo",
@@ -76,9 +79,7 @@ def generate_launch_description():
             "bash",
             "-lc",
             [
-                "source ",
-                px4_venv,
-                "/bin/activate && ",
+                "source ", px4_venv, "/bin/activate && ",
                 "mavproxy.py ",
                 "--master=udpin:0.0.0.0:14550 ",
                 "--aircraft uav_headless",
@@ -138,11 +139,13 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             "headless",
-            default_value="0",
+            default_value="false",
+            description="Run Gazebo without GUI. Default false.",
         ),
         DeclareLaunchArgument(
             "software_render",
             default_value="false",
+            description="Use Mesa llvmpipe software rendering.",
         ),
         DeclareLaunchArgument(
             "start_agent",
@@ -169,12 +172,6 @@ def generate_launch_description():
             default_value="/uav/camera/depth/image",
         ),
 
-        # Start order:
-        # 1. XRCE Agent
-        # 2. PX4 + Gazebo
-        # 3. MAVProxy GCS
-        # 4. depth bridge
-        # 5. offboard adapter
         agent,
         TimerAction(period=1.0, actions=[px4]),
         TimerAction(period=8.0, actions=[gcs]),

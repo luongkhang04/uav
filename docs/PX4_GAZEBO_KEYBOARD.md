@@ -36,7 +36,7 @@ deactivate 2>/dev/null || true
 source /opt/ros/$ROS_DISTRO/setup.bash
 source install/setup.bash
 
-ros2 launch uav_bringup px4_gazebo_depth.launch.py
+ros2 launch uav_bringup px4_gazebo_depth.launch.py world:=baylands
 ```
 
 This starts:

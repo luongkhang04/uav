@@ -22,7 +22,7 @@ Depth model:
 source ~/px4-venv/bin/activate
 cd ~/uav/external/PX4-Autopilot
 
-PX4_GZ_WORLD=default HEADLESS=1 make px4_sitl gz_x500_depth
+PX4_GZ_WORLD=default make px4_sitl gz_x500_depth
 ```
 
 No-depth model:
@@ -31,7 +31,7 @@ No-depth model:
 source ~/px4-venv/bin/activate
 cd ~/uav/external/PX4-Autopilot
 
-PX4_GZ_WORLD=default HEADLESS=1 make px4_sitl gz_x500
+PX4_GZ_WORLD=default make px4_sitl gz_x500
 ```
 
 If depth rendering fails, try:
