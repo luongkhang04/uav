@@ -1,23 +1,19 @@
 # UAV: ROS 2 + PX4 + Gazebo UAV Control Stack
 
-This repository provides a modular ROS 2 workspace for UAV simulation, control, monitoring, and future learning/XAI extensions. The current implementation focuses on PX4 + Gazebo SITL with ROS 2 Offboard velocity control, keyboard teleoperation, state monitoring, and depth camera bridging.
-
-Repository:
-
-```bash
-git clone --recursive https://github.com/luongkhang04/uav.git
-```
+This repository provides a modular ROS 2 workspace for UAV simulation, control,
+state monitoring, and future learning/XAI extensions. The current implementation
+uses PX4 + Gazebo SITL as the backend and exposes a backend-independent ROS 2
+interface for control and state.
 
 ## Current Goal
 
-The short-term goal is to build a clean UAV software stack that can:
+The short-term goal is to keep the UAV stack cleanly separated into:
 
-* run PX4 SITL with Gazebo;
-* expose PX4 state to ROS 2;
-* control the UAV through PX4 Offboard mode;
-* support keyboard control for manual testing;
-* monitor odometry, IMU, and depth camera streams;
-* provide a stable interface for future RL and XAI modules.
+* control clients that publish backend-independent velocity commands;
+* backend adapters that translate between `/uav/*` topics and a specific
+  simulator or vehicle backend;
+* state tools that consume normalized odometry, IMU, and camera topics;
+* launch and documentation for repeatable PX4/Gazebo development.
 
 The long-term goal is to support multiple backends:
 
@@ -27,20 +23,25 @@ AirSim
 Real PX4 UAV
 ```
 
-while keeping the high-level controller, RL policy, and XAI modules independent of the backend.
+while keeping keyboard control, RL policies, planners, state monitors, and XAI
+modules independent of the selected backend.
 
 ## Architecture
 
-The intended architecture is:
+The active backend boundary is `px4_backend_adapter.py`. It adapts both control
+and state between the backend-independent `/uav/*` interface and PX4 uXRCE-DDS
+topics.
+
+Control flow:
 
 ```text
 keyboard / RL policy / planner
         |
         v
-/uav/cmd_vel_body
-        |
+/uav/cmd_vel_body                 geometry_msgs/msg/TwistStamped
+        |                         frame: base_link, ROS body FLU
         v
-px4_offboard_adapter
+px4_backend_adapter
         |
         v
 /fmu/in/offboard_control_mode
@@ -48,31 +49,55 @@ px4_offboard_adapter
 /fmu/in/vehicle_command
         |
         v
-PX4
+PX4 Offboard control
         |
         v
-Gazebo UAV or real UAV
+Gazebo x500 / x500_depth
 ```
 
-State and sensor flow:
+State flow:
 
 ```text
-PX4 uXRCE-DDS topics
+PX4 uXRCE-DDS output topics
         |
         v
 /fmu/out/vehicle_odometry
 /fmu/out/sensor_combined
-/fmu/out/vehicle_status_v4
+        |
+        v
+px4_backend_adapter
+        |
+        v
+/uav/odom                        nav_msgs/msg/Odometry
+/uav/imu                         sensor_msgs/msg/Imu
+        |
+        v
+state_monitor / state_monitor_gui / RL / XAI
+```
 
-Gazebo sensor topics
+Camera flow:
+
+```text
+Gazebo depth camera topic
         |
         v
 ros_gz_bridge
         |
         v
-/uav/camera/depth/image
-/uav/camera/depth/points
-/uav/camera/rgb/image
+/uav/camera/depth/image          sensor_msgs/msg/Image
+        |
+        v
+state_monitor / state_monitor_gui / perception / RL / XAI
+```
+
+Frame conventions:
+
+```text
+/uav/cmd_vel_body   ROS body FLU: x forward, y left, z up, yaw-left positive
+/uav/odom pose      ROS ENU: x east, y north, z up
+/uav/odom twist     ROS body FLU
+/uav/imu            ROS body FLU-like angular velocity and acceleration
+PX4 backend         PX4 NED / body FRD, hidden behind px4_backend_adapter
 ```
 
 ## Packages
@@ -82,16 +107,42 @@ Current package layout:
 ```text
 uav/
 ├── external/
-│   └── PX4-Autopilot/              # PX4 submodule, built separately
+│   └── PX4-Autopilot/              # PX4 submodule, built with make
 ├── src/
 │   ├── px4_msgs/                   # PX4 ROS 2 message definitions
-│   ├── uav_control/                # Keyboard/manual control nodes
-│   ├── uav_backend_gazebo_px4/     # PX4/Gazebo backend adapter and monitor
-│   └── uav_bringup/                # Launch files
+│   ├── uav_control/                # Keyboard/manual control client
+│   ├── uav_backend_gazebo_px4/     # PX4/Gazebo control + state adapter
+│   ├── uav_state/                  # Backend-independent state monitors
+│   └── uav_bringup/                # Launch files for PX4/Gazebo workflow
 └── docs/
     ├── INSTALL.md
     └── PX4_GAZEBO_KEYBOARD.md
 ```
+
+Package responsibilities:
+
+* `uav_control`
+  * provides `keyboard_cmd_vel`;
+  * publishes `/uav/cmd_vel_body`;
+  * calls `/uav/offboard_arm`, `/uav/land`, and `/uav/disarm`.
+* `uav_backend_gazebo_px4`
+  * provides `px4_backend_adapter`;
+  * converts `/uav/cmd_vel_body` from ROS body FLU to PX4 NED velocity
+    setpoints;
+  * publishes PX4 Offboard setpoint and vehicle command topics;
+  * converts PX4 odometry and IMU data into normalized `/uav/odom` and
+    `/uav/imu`;
+  * keeps manual fallback backend startup instructions in its package README.
+* `uav_state`
+  * provides `state_monitor` for terminal status output;
+  * provides `state_monitor_gui` for local visual monitoring;
+  * subscribes only to backend-independent `/uav/*` state and camera topics.
+* `uav_bringup`
+  * provides `px4_gazebo_depth.launch.py`;
+  * starts Micro XRCE-DDS Agent, PX4 + Gazebo, MAVProxy, the depth bridge, and
+    `px4_backend_adapter`.
+* `px4_msgs`
+  * provides the PX4 message types used by the adapter.
 
 ## Implemented
 
@@ -99,38 +150,32 @@ The current implementation includes:
 
 * PX4-Autopilot as an external submodule.
 * `px4_msgs` as a ROS 2 package.
-* `uav_control/keyboard_cmd_vel.py`
-
-  * publishes `/uav/cmd_vel_body`;
-  * supports manual velocity control;
-  * can call arm/offboard, land, and disarm services.
-* `uav_backend_gazebo_px4/px4_offboard_adapter.py`
-
-  * subscribes `/uav/cmd_vel_body`;
-  * publishes PX4 Offboard setpoints;
-  * exposes `/uav/offboard_arm`, `/uav/land`, and `/uav/disarm`;
-  * converts ROS body-frame velocity commands into PX4 NED velocity setpoints.
-* `uav_backend_gazebo_px4/state_monitor.py`
-
-  * monitors PX4 odometry;
-  * monitors IMU;
-  * monitors depth image if the Gazebo depth bridge is running.
-* PX4 + Gazebo SITL workflow.
+* Keyboard hold/release control through `uav_control/keyboard_cmd_vel.py`.
+* A PX4/Gazebo backend adapter in
+  `uav_backend_gazebo_px4/px4_backend_adapter.py`.
+* Backend-independent state monitors in `uav_state`.
+* One-command PX4/Gazebo launch through `uav_bringup`.
 * Headless GCS through MAVProxy.
 * Depth camera bridge through `ros_gz_bridge`.
+* Manual backend fallback instructions in
+  `src/uav_backend_gazebo_px4/README.md`.
 
-## Main ROS Topics
+`px4_backend_adapter.py` currently:
 
-Command topic:
+* subscribes to `/uav/cmd_vel_body`;
+* streams `/fmu/in/offboard_control_mode` at 20 Hz;
+* publishes `/fmu/in/trajectory_setpoint` velocity setpoints;
+* publishes `/fmu/in/vehicle_command` for mode, arm, disarm, and land;
+* exposes `/uav/offboard_arm`, `/uav/land`, and `/uav/disarm`;
+* subscribes to `/fmu/out/vehicle_odometry` and `/fmu/out/sensor_combined`;
+* publishes normalized `/uav/odom` and `/uav/imu`.
+
+## ROS Interface
+
+Backend-independent control topic:
 
 ```text
-/uav/cmd_vel_body
-```
-
-Message type:
-
-```text
-geometry_msgs/msg/TwistStamped
+/uav/cmd_vel_body                 geometry_msgs/msg/TwistStamped
 ```
 
 Control convention:
@@ -142,29 +187,39 @@ linear.z   up
 angular.z  yaw-left rate
 ```
 
-PX4 input topics:
+Backend-independent state topics:
+
+```text
+/uav/odom                         nav_msgs/msg/Odometry
+/uav/imu                          sensor_msgs/msg/Imu
+/uav/camera/depth/image           sensor_msgs/msg/Image
+/uav/camera/depth/points          sensor_msgs/msg/PointCloud2, optional
+/uav/camera/rgb/image             sensor_msgs/msg/Image, optional
+```
+
+Backend-independent services:
+
+```text
+/uav/offboard_arm                 std_srvs/srv/Trigger
+/uav/land                         std_srvs/srv/Trigger
+/uav/disarm                       std_srvs/srv/Trigger
+```
+
+PX4 backend topics used by `px4_backend_adapter`:
 
 ```text
 /fmu/in/offboard_control_mode
 /fmu/in/trajectory_setpoint
 /fmu/in/vehicle_command
-```
-
-PX4 output topics:
-
-```text
 /fmu/out/vehicle_odometry
 /fmu/out/sensor_combined
-/fmu/out/vehicle_status_v4
-/fmu/out/vehicle_command_ack_v1
 ```
 
-Gazebo/ROS camera topics:
+Gazebo bridge topics:
 
 ```text
-/uav/camera/depth/image
-/uav/camera/depth/points
-/uav/camera/rgb/image
+/depth_camera                     Gazebo image topic
+/uav/camera/depth/image           ROS 2 bridged image topic
 ```
 
 ## Quick Start
@@ -184,91 +239,46 @@ docs/PX4_GAZEBO_KEYBOARD.md
 Typical run flow:
 
 ```bash
+cd ~/uav
+source /opt/ros/$ROS_DISTRO/setup.bash
+source install/setup.bash
+
 ros2 launch uav_bringup px4_gazebo_depth.launch.py
 ```
 
-Then in another terminal:
+Then in another interactive terminal:
 
 ```bash
+cd ~/uav
+source /opt/ros/$ROS_DISTRO/setup.bash
+source install/setup.bash
+
 ros2 run uav_control keyboard_cmd_vel
 ```
 
-Keyboard controls:
+Optional state monitor:
 
-```text
-o      Offboard + Arm
-r      Up / takeoff velocity
-f      Down
-w/s    Forward / backward
-a/d    Left / right
-j/l    Yaw left / yaw right
-space  Stop
-p      Land
-k      Disarm
-x      Exit keyboard
+```bash
+ros2 run uav_state state_monitor
 ```
 
 ## Current Status
 
 Working:
 
-* PX4 SITL starts with Gazebo.
-* Micro XRCE-DDS Agent connects to PX4.
-* PX4 publishes odometry and IMU to ROS 2.
-* Offboard adapter publishes velocity setpoints to PX4.
-* Keyboard control can command body-frame velocity.
-* UAV can arm and take off in simulation.
-* State monitor receives odometry and IMU.
-* `x500_depth` model exposes Gazebo camera/depth topics.
+* PX4 SITL starts with Gazebo from the launch file.
+* Micro XRCE-DDS Agent connects PX4 to ROS 2.
+* MAVProxy provides a headless GCS connection.
+* `px4_backend_adapter` handles both control and state adaptation.
+* Keyboard control publishes backend-independent body-frame commands.
+* UAV can enter Offboard mode, arm, move, land, and disarm in simulation.
+* `/uav/odom` and `/uav/imu` expose normalized backend-independent state.
+* `state_monitor` and `state_monitor_gui` consume normalized state topics.
+* `gz_x500_depth` exposes a depth camera that can be bridged to ROS 2.
 
 In progress:
 
-* Stable one-command launch for the whole PX4 backend.
-* Robust depth bridge configuration.
-* Cleaner run mode with fewer manual terminals.
-* RL environment wrapper.
+* Broader perception topic support beyond the current depth image bridge.
+* Cleaner reset/episode handling for future RL workflows.
 * XAI observation/action logging.
-
-## Roadmap
-
-Near-term:
-
-* Add and validate launch files for:
-
-  * PX4 + Gazebo;
-  * Micro XRCE-DDS Agent;
-  * MAVProxy GCS;
-  * `ros_gz_bridge`;
-  * PX4 Offboard adapter.
-* Add a minimal keyboard workflow with arm, land, and disarm keys.
-* Add a clean monitor command for odometry, IMU, depth image, and PX4 status.
-* Add config files for topic names, speed limits, and backend selection.
-
-Mid-term:
-
-* Add AirSim backend adapter.
-* Add real PX4 backend adapter.
-* Add unified backend interface:
-
-```text
-/uav/odom
-/uav/imu
-/uav/status
-/uav/camera/depth/image
-/uav/cmd_vel_body
-```
-
-* Add RL training environment using the same command/state interface.
-* Add evaluation scripts for trained policies.
-
-Long-term:
-
-* Add XAI modules for explaining UAV decisions.
-* Add policy action attribution from depth/state inputs.
-* Add safety monitor and failsafe layer.
-* Add experiment logging and replay.
-* Add support for real UAV deployment with strict safety checks.
-
-## Safety Note
-
-This repository is currently intended for simulation. Do not run the same Offboard control stack on a real UAV without proper safety checks, manual override, geofence, kill switch, tested failsafe behavior, and supervision.
+* Additional backend adapters for AirSim and real PX4 vehicles.
