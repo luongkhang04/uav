@@ -1,0 +1,75 @@
+ros:
+  odom_topic: /uav/odom
+  imu_topic: /uav/imu
+  depth_topic: /uav/camera/depth/image
+  cmd_topic: /uav/cmd_vel_body
+  offboard_arm_service: /uav/offboard_arm
+  land_service: /uav/land
+  disarm_service: /uav/disarm
+  control_rate_hz: 10.0
+  data_timeout_sec: 5.0
+  service_timeout_sec: 5.0
+  auto_arm: true
+  stop_on_reset: true
+  stop_on_close: true
+  depth_scale: 1.0
+
+environment:
+  env_name: GazeboPx4Avoid
+  start_position: [0.0, 0.0, 5.0]
+  start_random_yaw_rad: 6.283185307179586
+  goal_position: null
+  goal_distance: 50.0
+  goal_random_yaw_rad: 6.283185307179586
+  goal_z_offset_range: [-2.0, 2.0]
+  goal_sample_attempts: 100
+  goal_collision_check: false
+  goal_clearance_m: 0.0
+  workspace_x: [-70.0, 70.0]
+  workspace_y: [-70.0, 70.0]
+  workspace_z: [0.0, 50.0]
+  max_episode_steps: 400
+  accept_radius: 2.0
+  crash_distance: 1.5
+  max_depth_meters: 15.0
+  depth_image_width: 90
+  depth_image_height: 60
+  depth_grid_rows: 5
+  depth_grid_cols: 5
+  depth_horizontal_fov_deg: 90.0
+  obstacle_warning_distance: 10.0
+  state_z_norm_m: 5.0
+  seed: 0
+
+action:
+  dt: 0.1
+  v_xy_min: 0.5
+  v_xy_max: 5.0
+  v_z_max: 2.0
+  yaw_rate_max_deg: 30.0
+
+reward:
+  goal: 10.0
+  crash: -20.0
+  outside_workspace: -10.0
+  alpha_dist: 50.0
+  alpha_alt: 0.1
+  alpha_obs: 0.2
+  alpha_act: 0.1
+  alpha_yaw: 0.5
+  gamma_z: 5.0
+
+sac:
+  total_timesteps: 100000
+  learning_rate: 0.001
+  gamma: 0.99
+  learning_starts: 2000
+  buffer_size: 50000
+  batch_size: 512
+  train_freq: 100
+  gradient_steps: 100
+  net_arch: [64, 32, 16]
+  activation_fn: tanh
+  ent_coef: auto
+  seed: 0
+  checkpoint_freq: 10000
