@@ -113,10 +113,13 @@ uav/
 │   ├── uav_control/                # Keyboard/manual control client
 │   ├── uav_backend_gazebo_px4/     # PX4/Gazebo control + state adapter
 │   ├── uav_state/                  # Backend-independent state monitors
+│   ├── uav_train/                  # XAI SAC training env and trainer
+│   ├── uav_evaluate/               # XAI SAC policy evaluation runner
 │   └── uav_bringup/                # Launch files for PX4/Gazebo workflow
 └── docs/
     ├── INSTALL.md
-    └── PX4_GAZEBO_KEYBOARD.md
+    ├── PX4_GAZEBO_KEYBOARD.md
+    └── XAI_SAC_GAZEBO.md
 ```
 
 Package responsibilities:
@@ -137,6 +140,15 @@ Package responsibilities:
   * provides `state_monitor` for terminal status output;
   * provides `state_monitor_gui` for local visual monitoring;
   * subscribes only to backend-independent `/uav/*` state and camera topics.
+* `uav_train`
+  * provides `train_xai_sac`;
+  * mirrors the `XAI_SAC_AirSim_UAV` SB3 SAC training loop;
+  * builds the same 31-value observation and 3-value action interface from
+    normalized ROS topics.
+* `uav_evaluate`
+  * provides `evaluate_xai_sac`;
+  * loads a trained SAC `.zip` and publishes policy commands to
+    `/uav/cmd_vel_body`.
 * `uav_bringup`
   * provides `px4_gazebo_depth.launch.py`;
   * starts Micro XRCE-DDS Agent, PX4 + Gazebo, MAVProxy, the depth bridge, and
@@ -157,6 +169,9 @@ The current implementation includes:
 * One-command PX4/Gazebo launch through `uav_bringup`.
 * Headless GCS through MAVProxy.
 * Depth camera bridge through `ros_gz_bridge`.
+* XAI SAC training and evaluation packages using the same SB3 model shape as
+  `XAI_SAC_AirSim_UAV`.
+* A copied evaluation checkpoint at `models/xai_sac/model_final.zip`.
 * Manual backend fallback instructions in
   `src/uav_backend_gazebo_px4/README.md`.
 
@@ -236,6 +251,12 @@ Run PX4 + Gazebo + keyboard control:
 docs/PX4_GAZEBO_KEYBOARD.md
 ```
 
+Run XAI SAC training or evaluation:
+
+```text
+docs/XAI_SAC_GAZEBO.md
+```
+
 Typical run flow:
 
 ```bash
@@ -262,6 +283,13 @@ Optional state monitor:
 ros2 run uav_state state_monitor_gui
 ```
 
+Evaluate the copied XAI SAC checkpoint after PX4/Gazebo is running:
+
+```bash
+ros2 run uav_evaluate evaluate_xai_sac \
+  --model ~/uav/models/xai_sac/model_final.zip
+```
+
 ## Current Status
 
 Working:
@@ -275,10 +303,11 @@ Working:
 * `/uav/odom` and `/uav/imu` expose normalized backend-independent state.
 * `state_monitor` and `state_monitor_gui` consume normalized state topics.
 * `gz_x500_depth` exposes a depth camera that can be bridged to ROS 2.
+* `uav_train` and `uav_evaluate` expose the XAI SAC train/eval flow.
+* `models/xai_sac/model_final.zip` contains the copied trained checkpoint.
 
 In progress:
 
 * Broader perception topic support beyond the current depth image bridge.
 * Cleaner reset/episode handling for future RL workflows.
-* XAI observation/action logging.
 * Additional backend adapters for AirSim and real PX4 vehicles.

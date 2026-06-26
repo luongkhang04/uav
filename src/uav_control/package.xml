@@ -4,7 +4,7 @@
   <name>uav_control</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="khanglt10@todo.todo">khanglt10</maintainer>
+  <maintainer email="uav@example.com">UAV Maintainers</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>

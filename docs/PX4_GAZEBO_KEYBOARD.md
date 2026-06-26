@@ -9,7 +9,7 @@ PX4 + Gazebo
 Micro XRCE-DDS Agent
 MAVProxy headless GCS
 ros_gz_bridge depth camera bridge
-px4_offboard_adapter
+px4_backend_adapter
 ```
 
 Keyboard control runs separately because it needs an interactive terminal.
@@ -46,7 +46,7 @@ Micro XRCE-DDS Agent
 PX4 + Gazebo x500_depth
 MAVProxy GCS
 ros_gz_bridge /depth_camera
-px4_offboard_adapter
+px4_backend_adapter
 ```
 
 If the depth model fails because of OpenGL/EGL, use software rendering:

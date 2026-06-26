@@ -4,7 +4,7 @@
   <version>0.0.1</version>
   <description>Backend-independent UAV state monitoring tools.</description>
 
-  <maintainer email="khang@example.com">khang</maintainer>
+  <maintainer email="uav@example.com">UAV Maintainers</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_python</buildtool_depend>

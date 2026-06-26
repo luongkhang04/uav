@@ -19,7 +19,12 @@ micro-xrce-dds-agent udp4 -p 8888
 Depth model:
 
 ```bash
-source ~/px4-venv/bin/activate
+cd ~/uav
+source config/uav_env.sh
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate "$PX4_CONDA_ENV"
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH
 cd ~/uav/external/PX4-Autopilot
 
 PX4_GZ_WORLD=default make px4_sitl gz_x500_depth
@@ -28,7 +33,12 @@ PX4_GZ_WORLD=default make px4_sitl gz_x500_depth
 No-depth model:
 
 ```bash
-source ~/px4-venv/bin/activate
+cd ~/uav
+source config/uav_env.sh
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate "$PX4_CONDA_ENV"
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH
 cd ~/uav/external/PX4-Autopilot
 
 PX4_GZ_WORLD=default make px4_sitl gz_x500
@@ -37,7 +47,12 @@ PX4_GZ_WORLD=default make px4_sitl gz_x500
 If depth rendering fails, try:
 
 ```bash
-source ~/px4-venv/bin/activate
+cd ~/uav
+source config/uav_env.sh
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate "$PX4_CONDA_ENV"
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH
 cd ~/uav/external/PX4-Autopilot
 
 export LIBGL_ALWAYS_SOFTWARE=1
@@ -50,7 +65,12 @@ PX4_GZ_WORLD=default HEADLESS=1 make px4_sitl gz_x500_depth
 ### Terminal 3: MAVProxy Headless GCS
 
 ```bash
-source ~/px4-venv/bin/activate
+cd ~/uav
+source config/uav_env.sh
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate "$PX4_CONDA_ENV"
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH
 
 mavproxy.py \
   --master=udpin:0.0.0.0:14550 \
@@ -75,7 +95,7 @@ Bridge it to ROS 2:
 
 ```bash
 cd ~/uav
-deactivate 2>/dev/null || true
+conda deactivate 2>/dev/null || true
 source /opt/ros/$ROS_DISTRO/setup.bash
 source install/setup.bash
 
@@ -104,9 +124,9 @@ ros2 run ros_gz_bridge parameter_bridge \
 
 ```bash
 cd ~/uav
-deactivate 2>/dev/null || true
+conda deactivate 2>/dev/null || true
 source /opt/ros/$ROS_DISTRO/setup.bash
 source install/setup.bash
 
-ros2 run uav_backend_gazebo_px4 px4_offboard_adapter
+ros2 run uav_backend_gazebo_px4 px4_backend_adapter
 ```

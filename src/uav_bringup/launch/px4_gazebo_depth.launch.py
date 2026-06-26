@@ -9,11 +9,40 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
+def _read_env_config():
+    launch_dir = os.path.dirname(os.path.realpath(__file__))
+    source_config = os.path.normpath(
+        os.path.join(launch_dir, "../../../config/uav_env.sh"),
+    )
+    install_config = os.path.normpath(
+        os.path.join(launch_dir, "../config/uav_env.sh"),
+    )
+    config_path = source_config if os.path.exists(source_config) else install_config
+    values = {}
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as config_file:
+            for raw_line in config_file:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                values[key.strip()] = value.strip().strip("\"").strip(chr(39))
+    except OSError:
+        pass
+
+    return values
+
+
 def generate_launch_description():
     home = os.path.expanduser("~")
+    env_config = _read_env_config()
+    px4_conda_env_default = env_config.get("PX4_CONDA_ENV", "px4")
+
 
     px4_dir = LaunchConfiguration("px4_dir")
-    px4_venv = LaunchConfiguration("px4_venv")
+    px4_conda_setup = LaunchConfiguration("px4_conda_setup")
+    px4_conda_env = LaunchConfiguration("px4_conda_env")
     model = LaunchConfiguration("model")
     world = LaunchConfiguration("world")
 
@@ -49,7 +78,9 @@ def generate_launch_description():
             "bash",
             "-lc",
             [
-                "source ", px4_venv, "/bin/activate && ",
+                "source ", px4_conda_setup, " && ",
+                "conda activate ", px4_conda_env, " && ",
+                "export PYTHONNOUSERSITE=1; unset PYTHONPATH; ",
                 "cd ", px4_dir, " && ",
 
                 # Optional software rendering.
@@ -79,7 +110,9 @@ def generate_launch_description():
             "bash",
             "-lc",
             [
-                "source ", px4_venv, "/bin/activate && ",
+                "source ", px4_conda_setup, " && ",
+                "conda activate ", px4_conda_env, " && ",
+                "export PYTHONNOUSERSITE=1; unset PYTHONPATH; ",
                 "mavproxy.py ",
                 "--master=udpin:0.0.0.0:14550 ",
                 "--aircraft uav_headless",
@@ -126,8 +159,12 @@ def generate_launch_description():
             default_value=os.path.join(home, "uav/external/PX4-Autopilot"),
         ),
         DeclareLaunchArgument(
-            "px4_venv",
-            default_value=os.path.join(home, "px4-venv"),
+            "px4_conda_setup",
+            default_value=os.path.join(home, "miniconda3/etc/profile.d/conda.sh"),
+        ),
+        DeclareLaunchArgument(
+            "px4_conda_env",
+            default_value=px4_conda_env_default,
         ),
         DeclareLaunchArgument(
             "model",
