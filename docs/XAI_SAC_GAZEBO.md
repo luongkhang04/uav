@@ -60,7 +60,7 @@ Then run:
 
 ```bash
 ros2 run uav_evaluate evaluate_xai_sac \
-  --model ~/uav/models/xai_sac/model_final.zip \
+  --model ~/uav/models/xai_sac/airsim.zip \
   --episodes 10
 ```
 

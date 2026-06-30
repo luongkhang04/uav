@@ -9,7 +9,7 @@ PX4 + Gazebo
 Micro XRCE-DDS Agent
 MAVProxy headless GCS
 ros_gz_bridge depth camera bridge
-px4_backend_adapter
+px4_offboard_adapter
 ```
 
 Keyboard control runs separately because it needs an interactive terminal.
@@ -36,7 +36,7 @@ deactivate 2>/dev/null || true
 source /opt/ros/$ROS_DISTRO/setup.bash
 source install/setup.bash
 
-ros2 launch uav_bringup px4_gazebo_depth.launch.py world:=baylands
+ros2 launch uav_bringup px4_gazebo_depth.launch.py world:=baylands_qaci software_render:=true
 ```
 
 This starts:
@@ -46,7 +46,7 @@ Micro XRCE-DDS Agent
 PX4 + Gazebo x500_depth
 MAVProxy GCS
 ros_gz_bridge /depth_camera
-px4_backend_adapter
+px4_offboard_adapter
 ```
 
 If the depth model fails because of OpenGL/EGL, use software rendering:
@@ -117,7 +117,7 @@ SSH terminal:
 
 ## 5. State Monitor
 
-Run the terminal monitor:
+Run:
 
 ```bash
 cd ~/uav
@@ -138,17 +138,10 @@ IMU gyro(rad/s): ...
 Depth image: WIDTHxHEIGHT, encoding=...
 ```
 
-Or run the GUI monitor from a desktop session:
+If using `gz_x500` instead of `gz_x500_depth`, depth will stay:
 
-```bash
-cd ~/uav
-deactivate 2>/dev/null || true
-source /opt/ros/$ROS_DISTRO/setup.bash
-source install/setup.bash
-
-ros2 run uav_state state_monitor_gui
+```text
+depth=0 Hz
 ```
 
-The GUI subscribes to odometry, IMU, depth image, and RGB image topics and opens
-an OpenCV window named `UAV State Monitor`. Over SSH, use X forwarding or run
-the terminal `state_monitor` instead.
+This is expected because `gz_x500` has no depth camera.

@@ -14,8 +14,8 @@ from uav_train.env import XaiSacGazeboEnv
 
 def default_model_path() -> Path:
     candidates = [
-        Path.cwd() / "models" / "xai_sac" / "model_final.zip",
-        Path.home() / "uav" / "models" / "xai_sac" / "model_final.zip",
+        Path.cwd() / "models" / "xai_sac" / "airsim.zip",
+        Path.home() / "uav" / "models" / "xai_sac" / "airsim.zip",
     ]
     for candidate in candidates:
         if candidate.exists():
