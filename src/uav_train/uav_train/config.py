@@ -80,10 +80,12 @@ class EnvironmentConfig:
 @dataclass
 class ActionConfig:
     dt: float = 0.1
-    v_xy_min: float = 0.5
-    v_xy_max: float = 5.0
-    v_z_max: float = 2.0
-    yaw_rate_max_deg: float = 30.0
+    v_xy_min: float = 0.0
+    v_xy_max: float = 12.0
+    v_z_max: float | None = None
+    v_z_max_up: float = 3.0
+    v_z_max_down: float = 1.5
+    yaw_rate_max_deg: float = 57.29577951308232
 
 
 @dataclass

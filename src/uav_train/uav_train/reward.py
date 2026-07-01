@@ -88,7 +88,13 @@ def compute_reward(
     else:
         r_obs = 0.0
 
-    v_z_cost = (abs(float(action[1])) / max(action_cfg.v_z_max, 1e-6)) ** 2
+    v_z = float(action[1])
+    v_z_limit = (
+        action_cfg.v_z_max_up
+        if v_z >= 0.0
+        else action_cfg.v_z_max_down
+    )
+    v_z_cost = (abs(v_z) / max(v_z_limit, 1e-6)) ** 2
     yaw_limit = max(np.deg2rad(action_cfg.yaw_rate_max_deg), 1e-6)
     yaw_cost = abs(float(action[2])) / yaw_limit
     r_act = float(v_z_cost + yaw_cost)

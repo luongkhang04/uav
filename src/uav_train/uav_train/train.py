@@ -113,6 +113,33 @@ def save_training_state(
     return model_path, replay_buffer_path
 
 
+def load_resume_model(
+    model_path: str | Path,
+    env: Monitor,
+    device: str,
+) -> tuple[SAC, bool]:
+    try:
+        return SAC.load(model_path, env=env, device=device), False
+    except ValueError as exc:
+        message = str(exc)
+        if "Action spaces do not match" not in message:
+            raise
+
+        print("Resume checkpoint action space differs from current config.")
+        print(f"  {message}")
+        print(
+            "Loading checkpoint parameters with the current environment "
+            "action space; this is fine-tuning, not an exact resume."
+        )
+        model = SAC.load(
+            model_path,
+            env=env,
+            device=device,
+            custom_objects={"action_space": env.action_space},
+        )
+        return model, True
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train the XAI SAC UAV policy with ROS/Gazebo."
@@ -157,13 +184,25 @@ def main() -> None:
             check_env(env.unwrapped, warn=True)
 
         if args.resume:
-            model = SAC.load(args.resume, env=env, device=args.device)
+            model, action_space_changed = load_resume_model(
+                args.resume,
+                env,
+                args.device,
+            )
             replay_buffer_path = None
-            if args.resume_replay_buffer.lower() != "none":
+            if (
+                args.resume_replay_buffer.lower() != "none"
+                and not action_space_changed
+            ):
                 if args.resume_replay_buffer == "auto":
                     replay_buffer_path = infer_replay_buffer_path(args.resume)
                 else:
                     replay_buffer_path = Path(args.resume_replay_buffer)
+            elif action_space_changed:
+                print(
+                    "Skipping old replay buffer because the action space "
+                    "changed."
+                )
             if replay_buffer_path is not None and replay_buffer_path.exists():
                 model.load_replay_buffer(replay_buffer_path)
                 print(f"Loaded replay buffer: {replay_buffer_path}")

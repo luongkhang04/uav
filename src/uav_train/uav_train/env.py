@@ -56,7 +56,7 @@ class XaiSacGazeboEnv(gym.Env):
             low=np.array(
                 [
                     self.action_cfg.v_xy_min,
-                    -self.action_cfg.v_z_max,
+                    -self.action_cfg.v_z_max_down,
                     -yaw_rate_max,
                 ],
                 dtype=np.float32,
@@ -64,7 +64,7 @@ class XaiSacGazeboEnv(gym.Env):
             high=np.array(
                 [
                     self.action_cfg.v_xy_max,
-                    self.action_cfg.v_z_max,
+                    self.action_cfg.v_z_max_up,
                     yaw_rate_max,
                 ],
                 dtype=np.float32,
@@ -153,6 +153,13 @@ class XaiSacGazeboEnv(gym.Env):
         self.last_state_position = self.start_position.copy()
         self.goal_check_depth_m = None
         self.goal_position = self._sample_goal_position()
+        self.adapter.get_logger().info(
+            "Episode "
+            f"{self.episode_count} goal position: "
+            f"x={self.goal_position[0]:.3f}, "
+            f"y={self.goal_position[1]:.3f}, "
+            f"z={self.goal_position[2]:.3f}"
+        )
         self.initial_distance = max(
             float(np.linalg.norm(self.start_position - self.goal_position)),
             1e-6,
@@ -528,11 +535,12 @@ class XaiSacGazeboEnv(gym.Env):
             0.0,
             1.0,
         )
-        v_z_norm = np.clip(
-            v_z / max(self.action_cfg.v_z_max, 1e-6),
-            -1.0,
-            1.0,
+        v_z_limit = (
+            self.action_cfg.v_z_max_up
+            if v_z >= 0.0
+            else self.action_cfg.v_z_max_down
         )
+        v_z_norm = np.clip(v_z / max(v_z_limit, 1e-6), -1.0, 1.0)
         yaw_rate_norm = np.clip(
             yaw_rate
             / max(math.radians(self.action_cfg.yaw_rate_max_deg), 1e-6),

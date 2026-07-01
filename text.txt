@@ -1,0 +1,449 @@
+khanglt10@khanglt10-System-Product-Name:~/uav$ ros2 run uav_train train_xai_sac --resume ~/uav/logs/xai_sac_gazebo/airsim.zip
+[INFO] [1782878826.166866968] [xai_sac_gazebo_adapter]: XAI SAC Gazebo adapter started.
+[INFO] [1782878826.167227283] [xai_sac_gazebo_adapter]: odom : /uav/odom
+[INFO] [1782878826.167464255] [xai_sac_gazebo_adapter]: imu  : /uav/imu
+[INFO] [1782878826.167689295] [xai_sac_gazebo_adapter]: depth: /uav/camera/depth/image
+[INFO] [1782878826.167918371] [xai_sac_gazebo_adapter]: armed: /uav/armed
+[INFO] [1782878826.168160387] [xai_sac_gazebo_adapter]: crash: /uav/crash
+[INFO] [1782878826.168417195] [xai_sac_gazebo_adapter]: cmd  : /uav/cmd_vel_body
+Wrapping the env in a DummyVecEnv.
+Resume checkpoint action space differs from current config.
+  Action spaces do not match: Box([ 0.5       -2.        -0.5235988], [5.        2.        0.5235988], (3,), float32) != Box([ 0.  -1.5 -1. ], [12.  3.  1.], (3,), float32)
+Loading checkpoint parameters with the current environment action space; this is fine-tuning, not an exact resume.
+Wrapping the env in a DummyVecEnv.
+Skipping old replay buffer because the action space changed.
+[INFO] [1782878830.504322143] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878831.526510749] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878831.534960197] [xai_sac_gazebo_adapter]: Episode 1 goal position: x=33.844, y=-37.016, z=4.158
+Logging to logs\xai_sac\xai_sac_20260615_163759\tb/SAC_0
+[INFO] [1782878847.873546415] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878848.888505913] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878848.892868195] [xai_sac_gazebo_adapter]: Episode 2 goal position: x=-26.642, y=40.697, z=2.132
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 122      |
+|    ep_rew_mean     | 14.8     |
+|    success_rate    | 0.83     |
+| time/              |          |
+|    episodes        | 1341     |
+|    fps             | 5        |
+|    time_elapsed    | 21       |
+|    total_timesteps | 169417   |
+| train/             |          |
+|    actor_loss      | 14.5     |
+|    critic_loss     | 2.43     |
+|    ent_coef        | 0.0247   |
+|    ent_coef_loss   | 12.4     |
+|    learning_rate   | 0.001    |
+|    n_updates       | 166800   |
+---------------------------------
+[INFO] [1782878897.108752341] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878898.121040615] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878898.125174875] [xai_sac_gazebo_adapter]: Episode 3 goal position: x=-46.245, y=-9.032, z=9.302
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 125      |
+|    ep_rew_mean     | 12.5     |
+|    success_rate    | 0.82     |
+| time/              |          |
+|    episodes        | 1342     |
+|    fps             | 7        |
+|    time_elapsed    | 70       |
+|    total_timesteps | 169817   |
+| train/             |          |
+|    actor_loss      | 4.62     |
+|    critic_loss     | 0.0523   |
+|    ent_coef        | 0.042    |
+|    ent_coef_loss   | 2.15     |
+|    learning_rate   | 0.001    |
+|    n_updates       | 167200   |
+---------------------------------
+[INFO] [1782878901.494264962] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878902.498411501] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878902.500666698] [xai_sac_gazebo_adapter]: Episode 4 goal position: x=-49.182, y=8.897, z=7.836
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 123      |
+|    ep_rew_mean     | 12.3     |
+|    success_rate    | 0.81     |
+| time/              |          |
+|    episodes        | 1343     |
+|    fps             | 6        |
+|    time_elapsed    | 75       |
+|    total_timesteps | 169818   |
+---------------------------------
+[INFO] [1782878905.870641398] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878906.873695466] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878906.875443790] [xai_sac_gazebo_adapter]: Episode 5 goal position: x=-48.080, y=13.619, z=9.481
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 122      |
+|    ep_rew_mean     | 12.1     |
+|    success_rate    | 0.8      |
+| time/              |          |
+|    episodes        | 1344     |
+|    fps             | 6        |
+|    time_elapsed    | 79       |
+|    total_timesteps | 169819   |
+---------------------------------
+[INFO] [1782878910.236472708] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878911.239787811] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878911.242448276] [xai_sac_gazebo_adapter]: Episode 6 goal position: x=-49.599, y=-6.286, z=2.022
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 121      |
+|    ep_rew_mean     | 11.6     |
+|    success_rate    | 0.79     |
+| time/              |          |
+|    episodes        | 1345     |
+|    fps             | 6        |
+|    time_elapsed    | 84       |
+|    total_timesteps | 169820   |
+---------------------------------
+[INFO] [1782878914.605659044] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878915.610720360] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878915.612460295] [xai_sac_gazebo_adapter]: Episode 7 goal position: x=-49.166, y=-9.158, z=2.269
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 120      |
+|    ep_rew_mean     | 11.2     |
+|    success_rate    | 0.78     |
+| time/              |          |
+|    episodes        | 1346     |
+|    fps             | 5        |
+|    time_elapsed    | 88       |
+|    total_timesteps | 169821   |
+---------------------------------
+[INFO] [1782878918.977472450] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878919.979444941] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878919.981572577] [xai_sac_gazebo_adapter]: Episode 8 goal position: x=-50.078, y=0.457, z=3.405
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 118      |
+|    ep_rew_mean     | 10.9     |
+|    success_rate    | 0.77     |
+| time/              |          |
+|    episodes        | 1347     |
+|    fps             | 5        |
+|    time_elapsed    | 92       |
+|    total_timesteps | 169822   |
+---------------------------------
+[INFO] [1782878923.346608331] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878924.348184289] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878924.350708487] [xai_sac_gazebo_adapter]: Episode 9 goal position: x=-49.189, y=-9.350, z=6.332
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 117      |
+|    ep_rew_mean     | 10.5     |
+|    success_rate    | 0.76     |
+| time/              |          |
+|    episodes        | 1348     |
+|    fps             | 5        |
+|    time_elapsed    | 97       |
+|    total_timesteps | 169823   |
+---------------------------------
+[INFO] [1782878927.711146597] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878928.723015561] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878928.728358586] [xai_sac_gazebo_adapter]: Episode 10 goal position: x=-39.805, y=30.401, z=5.381
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 116      |
+|    ep_rew_mean     | 10.1     |
+|    success_rate    | 0.75     |
+| time/              |          |
+|    episodes        | 1349     |
+|    fps             | 5        |
+|    time_elapsed    | 101      |
+|    total_timesteps | 169824   |
+---------------------------------
+[INFO] [1782878932.114367363] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878933.120488047] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878933.123882366] [xai_sac_gazebo_adapter]: Episode 11 goal position: x=-24.528, y=43.638, z=2.994
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 114      |
+|    ep_rew_mean     | 9.75     |
+|    success_rate    | 0.74     |
+| time/              |          |
+|    episodes        | 1350     |
+|    fps             | 4        |
+|    time_elapsed    | 105      |
+|    total_timesteps | 169825   |
+---------------------------------
+[INFO] [1782878936.489016688] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878937.492897698] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878937.495674424] [xai_sac_gazebo_adapter]: Episode 12 goal position: x=-49.876, y=5.137, z=7.178
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 114      |
+|    ep_rew_mean     | 10       |
+|    success_rate    | 0.74     |
+| time/              |          |
+|    episodes        | 1351     |
+|    fps             | 4        |
+|    time_elapsed    | 110      |
+|    total_timesteps | 169826   |
+---------------------------------
+[INFO] [1782878940.867413170] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878941.879715817] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878941.883954436] [xai_sac_gazebo_adapter]: Episode 13 goal position: x=-49.291, y=9.415, z=5.069
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 113      |
+|    ep_rew_mean     | 9.63     |
+|    success_rate    | 0.73     |
+| time/              |          |
+|    episodes        | 1352     |
+|    fps             | 4        |
+|    time_elapsed    | 114      |
+|    total_timesteps | 169827   |
+---------------------------------
+[INFO] [1782878945.253443761] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878946.268560268] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878946.271698684] [xai_sac_gazebo_adapter]: Episode 14 goal position: x=-46.697, y=-18.444, z=9.847
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 111      |
+|    ep_rew_mean     | 9.38     |
+|    success_rate    | 0.72     |
+| time/              |          |
+|    episodes        | 1353     |
+|    fps             | 4        |
+|    time_elapsed    | 119      |
+|    total_timesteps | 169828   |
+---------------------------------
+[INFO] [1782878949.640082869] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878950.648357105] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878950.650876643] [xai_sac_gazebo_adapter]: Episode 15 goal position: x=-50.054, y=4.448, z=7.204
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 110      |
+|    ep_rew_mean     | 9.18     |
+|    success_rate    | 0.71     |
+| time/              |          |
+|    episodes        | 1354     |
+|    fps             | 4        |
+|    time_elapsed    | 123      |
+|    total_timesteps | 169829   |
+---------------------------------
+[INFO] [1782878954.011584464] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878955.013675126] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878955.015648557] [xai_sac_gazebo_adapter]: Episode 16 goal position: x=-50.095, y=4.402, z=5.111
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 108      |
+|    ep_rew_mean     | 8.76     |
+|    success_rate    | 0.7      |
+| time/              |          |
+|    episodes        | 1355     |
+|    fps             | 4        |
+|    time_elapsed    | 127      |
+|    total_timesteps | 169830   |
+---------------------------------
+[INFO] [1782878958.375676884] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878959.378885881] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878959.380584526] [xai_sac_gazebo_adapter]: Episode 17 goal position: x=-30.707, y=39.746, z=7.772
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 107      |
+|    ep_rew_mean     | 8.34     |
+|    success_rate    | 0.69     |
+| time/              |          |
+|    episodes        | 1356     |
+|    fps             | 4        |
+|    time_elapsed    | 132      |
+|    total_timesteps | 169831   |
+---------------------------------
+[INFO] [1782878962.759339808] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878963.779444307] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878963.782748200] [xai_sac_gazebo_adapter]: Episode 18 goal position: x=-47.457, y=16.920, z=4.482
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 107      |
+|    ep_rew_mean     | 8.52     |
+|    success_rate    | 0.69     |
+| time/              |          |
+|    episodes        | 1357     |
+|    fps             | 3        |
+|    time_elapsed    | 136      |
+|    total_timesteps | 169832   |
+---------------------------------
+[INFO] [1782878967.154803328] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878968.168831753] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878968.172517996] [xai_sac_gazebo_adapter]: Episode 19 goal position: x=-46.106, y=20.382, z=9.116
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 106      |
+|    ep_rew_mean     | 8.07     |
+|    success_rate    | 0.68     |
+| time/              |          |
+|    episodes        | 1358     |
+|    fps             | 3        |
+|    time_elapsed    | 140      |
+|    total_timesteps | 169833   |
+---------------------------------
+[INFO] [1782878971.539471595] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878972.541703356] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878972.544079525] [xai_sac_gazebo_adapter]: Episode 20 goal position: x=-49.280, y=-10.986, z=4.862
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 104      |
+|    ep_rew_mean     | 7.91     |
+|    success_rate    | 0.67     |
+| time/              |          |
+|    episodes        | 1359     |
+|    fps             | 3        |
+|    time_elapsed    | 145      |
+|    total_timesteps | 169834   |
+---------------------------------
+[INFO] [1782878975.907159238] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878976.924935042] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878976.926833350] [xai_sac_gazebo_adapter]: Episode 21 goal position: x=-47.166, y=18.163, z=4.575
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 102      |
+|    ep_rew_mean     | 7.85     |
+|    success_rate    | 0.66     |
+| time/              |          |
+|    episodes        | 1360     |
+|    fps             | 3        |
+|    time_elapsed    | 149      |
+|    total_timesteps | 169835   |
+---------------------------------
+[INFO] [1782878980.295145864] [xai_sac_gazebo_adapter]: Episode arm/offboard attempt 1/5.
+[WARN] [1782878981.298933331] [xai_sac_gazebo_adapter]: PX4 armed-state confirmation was not observed; continuing because armed_confirmation_required is false. If PX4 still auto-disarms, restart PX4/Gazebo so COM_DISARM_PRFLT=-1 is applied.
+[INFO] [1782878981.302081122] [xai_sac_gazebo_adapter]: Episode 22 goal position: x=-45.654, y=21.805, z=4.703
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 101      |
+|    ep_rew_mean     | 7.56     |
+|    success_rate    | 0.65     |
+| time/              |          |
+|    episodes        | 1361     |
+|    fps             | 3        |
+|    time_elapsed    | 154      |
+|    total_timesteps | 169836   |
+---------------------------------
+
+[px4_gazebo-2] INFO  [commander] Armed by external command
+[px4_gazebo-2] INFO  [tone_alarm] arming warning
+[mavproxy_gcs-3] AP: Armed by external command
+[mavproxy_gcs-3] ARMED
+[mavproxy_gcs-3] UNKNOWN> Mode UNKNOWN
+[mavproxy_gcs-3] Arming checks disabled
+[px4_gazebo-2] INFO  [commander] Takeoff detected
+[mavproxy_gcs-3] AP: Takeoff detected
+[px4_gazebo-2] INFO  [commander] Landing detected
+[mavproxy_gcs-3] AP: Landing detected
+[px4_gazebo-2] INFO  [commander] Takeoff detected
+[mavproxy_gcs-3] AP: Takeoff detected
+[px4_gazebo-2] INFO  [commander] Disarmed by external command
+[px4_gazebo-2] INFO  [tone_alarm] notify neutral
+[mavproxy_gcs-3] AP: Disarmed by external command
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: horizontal velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: horizontal velocity unstable
+[mavproxy_gcs-3] DISARMED
+[px4_gazebo-2] INFO  [logger] closed logfile, bytes written: 5356054
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: horizontal velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (roll)
+[mavproxy_gcs-3] AP: Preflight Fail: horizontal velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (roll)
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (roll)
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (roll)
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight: GPS Horizontal Pos Drift too high
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (roll)
+[mavproxy_gcs-3] AP: Preflight: GPS Horizontal Pos Drift too high
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (roll)
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: vertical velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (roll)
+[mavproxy_gcs-3] AP: Preflight Fail: vertical velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (roll)
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: vertical velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (roll)
+[mavproxy_gcs-3] AP: Preflight Fail: vertical velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (roll)
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: horizontal velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (roll)
+[mavproxy_gcs-3] AP: Preflight Fail: horizontal velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (roll)
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: horizontal velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (roll)
+[mavproxy_gcs-3] AP: Preflight Fail: horizontal velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (roll)
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [commander] Arming denied: Resolve system health failures first
+[px4_gazebo-2] INFO  [tone_alarm] notify negative
+[mavproxy_gcs-3] AP: Arming denied: Resolve system health failures first
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: horizontal velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: Attitude failure (pitch)
+[mavproxy_gcs-3] AP: Preflight Fail: horizontal velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: Attitude failure (pitch)
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: horizontal velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: horizontal velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: vertical velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: vertical velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: vertical velocity unstable
+[mavproxy_gcs-3] AP: Preflight Fail: vertical velocity unstable
+[px4_gazebo-2] WARN  [health_and_arming_checks] Preflight Fail: height estimate not stable
+[mavproxy_gcs-3] AP: Preflight Fail: height estimate not stable
+
+
