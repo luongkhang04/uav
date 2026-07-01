@@ -21,6 +21,18 @@ from .config import (
 from .env import XaiSacGazeboEnv
 
 
+MONITOR_INFO_KEYWORDS = (
+    "termination_reason",
+    "is_not_in_workspace",
+    "workspace_violation",
+    "is_crash",
+    "is_timeout",
+    "position_x",
+    "position_y",
+    "position_z",
+)
+
+
 def build_sac_model(
     config: ProjectConfig,
     env: Monitor,
@@ -138,6 +150,7 @@ def main() -> None:
     env = Monitor(
         XaiSacGazeboEnv(config),
         filename=str(run_dir / "monitor.csv"),
+        info_keywords=MONITOR_INFO_KEYWORDS,
     )
     try:
         if args.check_env:

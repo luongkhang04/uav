@@ -9,7 +9,8 @@ PX4 + Gazebo
 Micro XRCE-DDS Agent
 MAVProxy headless GCS
 ros_gz_bridge depth camera bridge
-px4_offboard_adapter
+optional ros_gz_bridge contact bridge
+px4_offboard_adapter with /uav/crash output
 ```
 
 Keyboard control runs separately because it needs an interactive terminal.
@@ -47,7 +48,20 @@ PX4 + Gazebo x500_depth
 MAVProxy GCS
 ros_gz_bridge /depth_camera
 px4_offboard_adapter
+/uav/crash from PX4 failure/termination state, optional contacts, and depth fallback
+/uav/contact_force_n and /uav/contact_depth_m for state monitoring
 ```
+
+Gazebo contact detection allows contacts whose names match
+`allowed_contact_names` (default `ground,ground_plane,landing_pad,landingpad,pad,floor`)
+unless they exceed `max_contact_force_n` (default `200`) or
+`max_contact_depth_m` (default `0.05`). Unallowed contact names are crashes.
+The depth fallback ignores invalid values below `depth_min_valid_m` (default
+`0.05`), uses `depth_crash_percentile` (default `0.5`) instead of one unstable
+minimum pixel, and requires `depth_crash_confirmations` consecutive close frames
+(default `3`). It is also ignored below `depth_min_airborne_altitude` (default
+`0.75`) so the ground during landing is not reported as a crash. PX4
+land-detected is only a backup if odometry altitude is not available.
 
 If the depth model fails because of OpenGL/EGL, use software rendering:
 
@@ -132,10 +146,12 @@ Expected output:
 
 ```text
 ===== UAV STATE MONITOR =====
-rates: odom=100 Hz | imu=250 Hz | depth=... Hz
-PX4 NED pos: ...
+rates: odom=100 Hz | imu=250 Hz | depth=... Hz | crash=20 Hz
+pose ENU: ...
 IMU gyro(rad/s): ...
 Depth image: WIDTHxHEIGHT, encoding=...
+Contact: force= 0.0 N | depth= 0.0000 m
+Crash state: ok | reason=ok depth_near_m=...
 ```
 
 If using `gz_x500` instead of `gz_x500_depth`, depth will stay:

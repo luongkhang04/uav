@@ -9,6 +9,7 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image, Imu
+from std_msgs.msg import Bool, String
 from std_srvs.srv import Trigger
 
 from .config import ProjectConfig
@@ -30,6 +31,9 @@ class RosGazeboAdapter(Node):
         self.latest_odom: Odometry | None = None
         self.latest_imu: Imu | None = None
         self.latest_depth: Image | None = None
+        self.latest_crash: Bool | None = None
+        self.latest_crash_time: float | None = None
+        self.latest_crash_reason = ""
 
         qos = qos_profile_sensor_data
         self.create_subscription(
@@ -50,6 +54,18 @@ class RosGazeboAdapter(Node):
             self._depth_cb,
             qos,
         )
+        self.create_subscription(
+            Bool,
+            self.ros_cfg.crash_topic,
+            self._crash_cb,
+            10,
+        )
+        self.create_subscription(
+            String,
+            self.ros_cfg.crash_reason_topic,
+            self._crash_reason_cb,
+            10,
+        )
 
         self.cmd_pub = self.create_publisher(
             TwistStamped,
@@ -68,11 +84,16 @@ class RosGazeboAdapter(Node):
             Trigger,
             self.ros_cfg.disarm_service,
         )
+        self.reset_sim_client = self.create_client(
+            Trigger,
+            self.ros_cfg.reset_sim_service,
+        )
 
         self.get_logger().info("XAI SAC Gazebo adapter started.")
         self.get_logger().info(f"odom : {self.ros_cfg.odom_topic}")
         self.get_logger().info(f"imu  : {self.ros_cfg.imu_topic}")
         self.get_logger().info(f"depth: {self.ros_cfg.depth_topic}")
+        self.get_logger().info(f"crash: {self.ros_cfg.crash_topic}")
         self.get_logger().info(f"cmd  : {self.ros_cfg.cmd_topic}")
 
     def _odom_cb(self, msg: Odometry) -> None:
@@ -83,6 +104,13 @@ class RosGazeboAdapter(Node):
 
     def _depth_cb(self, msg: Image) -> None:
         self.latest_depth = msg
+
+    def _crash_cb(self, msg: Bool) -> None:
+        self.latest_crash = msg
+        self.latest_crash_time = time.monotonic()
+
+    def _crash_reason_cb(self, msg: String) -> None:
+        self.latest_crash_reason = msg.data
 
     def wait_until_ready(self, timeout_sec: float | None = None) -> None:
         timeout = self.ros_cfg.data_timeout_sec
@@ -122,6 +150,12 @@ class RosGazeboAdapter(Node):
         return self._call_trigger(
             self.disarm_client,
             self.ros_cfg.disarm_service,
+        )
+
+    def reset_sim(self) -> bool:
+        return self._call_trigger(
+            self.reset_sim_client,
+            self.ros_cfg.reset_sim_service,
         )
 
     def _call_trigger(self, client: object, service_name: str) -> bool:
@@ -205,6 +239,17 @@ class RosGazeboAdapter(Node):
             max_depth_m=self.env_cfg.max_depth_meters,
             depth_scale=self.ros_cfg.depth_scale,
         )
+
+    def get_crash_state(self) -> bool | None:
+        if self.latest_crash is None or self.latest_crash_time is None:
+            return None
+        age = time.monotonic() - self.latest_crash_time
+        if age > float(self.ros_cfg.crash_state_timeout_sec):
+            return None
+        return bool(self.latest_crash.data)
+
+    def get_crash_reason(self) -> str:
+        return self.latest_crash_reason
 
     def close(self) -> None:
         if self.ros_cfg.stop_on_close:

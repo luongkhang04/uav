@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import time
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from .observation import (
     clean_depth,
     closest_depth_grid,
     resize_depth,
+    robust_near_depth,
     wrap_to_pi,
 )
 from .reward import RewardTerms, compute_reward
@@ -113,7 +115,11 @@ class XaiSacGazeboEnv(gym.Env):
         self.last_state_raw = np.zeros(6, dtype=np.float32)
         self.last_state_position = self.start_position.copy()
         self.last_reward_terms: RewardTerms | None = None
+        self.last_crash_signal_available = False
+        self.last_crash_source: str | None = None
+        self.last_crash_reason = ""
         self.goal_sample_failures = 0
+        self.goal_check_depth_m: np.ndarray | None = None
 
     def reset(
         self,
@@ -127,6 +133,17 @@ class XaiSacGazeboEnv(gym.Env):
 
         if self.config.ros.stop_on_reset:
             self.adapter.publish_zero(duration_sec=0.2)
+        if self.config.ros.reset_sim_on_reset:
+            reset_ok = self._reset_sim_with_retries()
+            if reset_ok:
+                self.adapter.wait_until_ready()
+            elif self.config.ros.reset_sim_required:
+                raise RuntimeError("Simulation reset service failed.")
+            else:
+                self.adapter.get_logger().warn(
+                    "Simulation reset failed after retries; "
+                    "continuing without Gazebo reset."
+                )
         if self.config.ros.auto_arm:
             self.adapter.arm_offboard()
 
@@ -134,6 +151,7 @@ class XaiSacGazeboEnv(gym.Env):
         self.episode_count += 1
         self.start_position, self.last_yaw_rad = self.adapter.get_pose()
         self.last_state_position = self.start_position.copy()
+        self.goal_check_depth_m = None
         self.goal_position = self._sample_goal_position()
         self.initial_distance = max(
             float(np.linalg.norm(self.start_position - self.goal_position)),
@@ -142,9 +160,30 @@ class XaiSacGazeboEnv(gym.Env):
         self.previous_distance = self.initial_distance
         self.last_action = np.zeros(3, dtype=np.float32)
         self.last_reward_terms = None
+        self.last_crash_signal_available = False
+        self.last_crash_source = None
+        self.last_crash_reason = ""
 
         obs = self._get_observation()
         return obs, self._info()
+
+    def _reset_sim_with_retries(self) -> bool:
+        attempts = max(1, int(self.config.ros.reset_sim_attempts))
+        delay_sec = max(
+            0.0,
+            float(self.config.ros.reset_sim_retry_delay_sec),
+        )
+        for attempt in range(1, attempts + 1):
+            if self.adapter.reset_sim():
+                return True
+            if attempt < attempts:
+                self.adapter.get_logger().warn(
+                    f"Simulation reset attempt {attempt}/{attempts} "
+                    "failed; retrying."
+                )
+                if delay_sec > 0.0:
+                    time.sleep(delay_sec)
+        return False
 
     def step(
         self,
@@ -163,7 +202,8 @@ class XaiSacGazeboEnv(gym.Env):
         relative_yaw = float(self.last_state_raw[2])
         reached_goal = self._is_goal_reached(position)
         crashed = self._is_crashed()
-        outside_workspace = self._is_outside_workspace(position)
+        workspace_violation = self._workspace_violation(position)
+        outside_workspace = bool(workspace_violation)
         truncated = self.step_count >= self.env_cfg.max_episode_steps
 
         reward_terms = compute_reward(
@@ -175,7 +215,7 @@ class XaiSacGazeboEnv(gym.Env):
             action=action,
             previous_distance=self.previous_distance,
             initial_distance=self.initial_distance,
-            min_depth_m=float(np.nanmin(self.last_depth_m)),
+            min_depth_m=self._near_depth_m(),
             relative_yaw_rad=relative_yaw,
             reached_goal=reached_goal,
             crashed=crashed,
@@ -191,7 +231,15 @@ class XaiSacGazeboEnv(gym.Env):
         info["is_success"] = reached_goal
         info["is_crash"] = crashed
         info["is_not_in_workspace"] = outside_workspace
+        info["workspace_violation"] = workspace_violation
         info["is_timeout"] = truncated and not terminated
+        info["termination_reason"] = (
+            reward_terms.terminal_reason
+            or ("timeout" if info["is_timeout"] else "")
+        )
+        info["position_x"] = float(position[0])
+        info["position_y"] = float(position[1])
+        info["position_z"] = float(position[2])
         return obs, reward_terms.reward, terminated, truncated, info
 
     def render(self) -> np.ndarray | None:
@@ -225,34 +273,206 @@ class XaiSacGazeboEnv(gym.Env):
             last_rejection_reason = rejection_reason
 
         self.goal_sample_failures += 1
+        detail = f"after {attempts} attempts: {last_rejection_reason}"
         if last_goal is not None:
-            return last_goal
-        raise RuntimeError(
-            "Failed to sample a goal position: "
-            f"{last_rejection_reason}"
-        )
+            detail += f"; last_candidate={last_goal.tolist()}"
+        raise RuntimeError(f"Failed to sample a valid goal position {detail}.")
 
     def _sample_unchecked_goal_position(self) -> np.ndarray:
         angle = float(
             self.np_random.uniform(0.0, self.env_cfg.goal_random_yaw_rad)
         )
-        z_min, z_max = self.env_cfg.goal_z_offset_range
         goal = self.start_position.copy()
         goal[0] += self.env_cfg.goal_distance * math.cos(angle)
         goal[1] += self.env_cfg.goal_distance * math.sin(angle)
-        goal[2] += float(self.np_random.uniform(z_min, z_max))
+        goal[2] = self._sample_goal_z()
         return goal.astype(np.float32)
 
+    def _sample_goal_z(self) -> float:
+        z_range = self.env_cfg.goal_z_range
+        if z_range is not None:
+            z_min, z_max = self._range_bounds(z_range, "goal_z_range")
+            return float(self.np_random.uniform(z_min, z_max))
+
+        offset_range = self.env_cfg.goal_z_offset_range
+        if offset_range is None:
+            return float(self.start_position[2])
+
+        z_min, z_max = self._range_bounds(
+            offset_range,
+            "goal_z_offset_range",
+        )
+        return float(
+            self.start_position[2] + self.np_random.uniform(z_min, z_max)
+        )
+
+    def _range_bounds(
+        self,
+        bounds: list[float],
+        name: str,
+    ) -> tuple[float, float]:
+        if len(bounds) != 2:
+            raise RuntimeError(f"{name} must contain exactly two values.")
+        lower = float(bounds[0])
+        upper = float(bounds[1])
+        if upper < lower:
+            lower, upper = upper, lower
+        return lower, upper
+
     def _goal_rejection_reason(self, goal: np.ndarray) -> str | None:
-        if self._is_outside_workspace(goal):
-            return "outside workspace"
+        workspace_violation = self._workspace_violation(goal)
+        if workspace_violation:
+            return f"outside workspace: {workspace_violation}"
+
+        altitude_reason = self._goal_altitude_rejection_reason(goal)
+        if altitude_reason:
+            return altitude_reason
+
+        if self.env_cfg.goal_collision_check:
+            return self._goal_clearance_rejection_reason(goal)
         return None
+
+    def _goal_altitude_rejection_reason(
+        self,
+        goal: np.ndarray,
+    ) -> str | None:
+        min_altitude = max(float(self.env_cfg.goal_min_altitude), 0.0)
+        if self.env_cfg.goal_collision_check:
+            min_altitude = max(
+                min_altitude,
+                self._effective_goal_clearance_m(),
+            )
+
+        altitude = float(goal[2])
+        if altitude < min_altitude:
+            return (
+                f"goal altitude z={altitude:.3f}<"
+                f"min_goal_altitude={min_altitude:.3f}"
+            )
+        return None
+
+    def _effective_goal_clearance_m(self) -> float:
+        clearance = max(float(self.env_cfg.goal_clearance_m), 0.0)
+        if clearance <= 0.0:
+            clearance = max(float(self.env_cfg.crash_distance), 0.0)
+        return clearance
+
+    def _goal_clearance_rejection_reason(
+        self,
+        goal: np.ndarray,
+    ) -> str | None:
+        depth_m = self._goal_check_depth_image()
+        if depth_m is None:
+            return "goal collision check requires a depth image"
+
+        delta = goal - self.start_position
+        horizontal_dist = float(np.linalg.norm(delta[:2]))
+        if horizontal_dist <= 1e-6:
+            return "goal has no horizontal separation"
+
+        half_h_fov = math.radians(
+            float(self.env_cfg.depth_horizontal_fov_deg)
+        ) / 2.0
+        if half_h_fov <= 0.0:
+            return "depth_horizontal_fov_deg must be positive"
+
+        clearance = self._effective_goal_clearance_m()
+        bearing = math.atan2(float(delta[1]), float(delta[0]))
+        relative_yaw = wrap_to_pi(bearing - self.last_yaw_rad)
+        yaw_margin = math.atan2(clearance, horizontal_dist)
+        if abs(relative_yaw) + yaw_margin > half_h_fov:
+            return (
+                "goal outside depth camera FOV for clearance check: "
+                f"relative_yaw_deg={math.degrees(relative_yaw):.1f}, "
+                f"half_fov_deg={math.degrees(half_h_fov):.1f}"
+            )
+
+        height, width = depth_m.shape[:2]
+        half_v_fov = self._depth_vertical_fov_rad(height, width) / 2.0
+        line_dist = float(np.linalg.norm(delta))
+        relative_pitch = math.atan2(float(delta[2]), horizontal_dist)
+        pitch_margin = math.atan2(clearance, max(line_dist, 1e-6))
+        if abs(relative_pitch) + pitch_margin > half_v_fov:
+            return (
+                "goal outside depth camera vertical FOV for clearance "
+                f"check: relative_pitch_deg="
+                f"{math.degrees(relative_pitch):.1f}, "
+                f"half_fov_deg={math.degrees(half_v_fov):.1f}"
+            )
+
+        col_center = int(
+            round((relative_yaw + half_h_fov) / (2.0 * half_h_fov)
+                  * (width - 1))
+        )
+        row_center = int(
+            round((0.5 - relative_pitch / (2.0 * half_v_fov))
+                  * (height - 1))
+        )
+        col_radius = max(
+            1,
+            int(math.ceil(yaw_margin / (2.0 * half_h_fov) * width)),
+        )
+        row_radius = max(
+            1,
+            int(math.ceil(pitch_margin / (2.0 * half_v_fov) * height)),
+        )
+
+        col_min = max(0, col_center - col_radius)
+        col_max = min(width, col_center + col_radius + 1)
+        row_min = max(0, row_center - row_radius)
+        row_max = min(height, row_center + row_radius + 1)
+        patch = depth_m[row_min:row_max, col_min:col_max]
+
+        near_depth = robust_near_depth(
+            patch,
+            self.env_cfg.max_depth_meters,
+            self.env_cfg.depth_min_valid_m,
+            self.env_cfg.depth_crash_percentile,
+        )
+        required_depth = min(
+            float(self.env_cfg.max_depth_meters),
+            line_dist + clearance,
+        )
+        if near_depth + 1e-3 < required_depth:
+            return (
+                "goal blocked by depth obstacle: "
+                f"near_depth_m={near_depth:.3f}<"
+                f"required_clear_depth_m={required_depth:.3f}"
+            )
+        return None
+
+    def _goal_check_depth_image(self) -> np.ndarray | None:
+        if self.goal_check_depth_m is not None:
+            return self.goal_check_depth_m
+        if self.adapter is None:
+            return None
+
+        depth_raw_m = clean_depth(
+            self.adapter.get_depth_image(),
+            self.env_cfg.max_depth_meters,
+            self.env_cfg.depth_min_valid_m,
+        )
+        depth_m = resize_depth(
+            depth_raw_m,
+            self.env_cfg.depth_image_width,
+            self.env_cfg.depth_image_height,
+        )
+        self.goal_check_depth_m = depth_m.astype(np.float32)
+        return self.goal_check_depth_m
+
+    def _depth_vertical_fov_rad(self, height: int, width: int) -> float:
+        half_h_fov = math.radians(
+            float(self.env_cfg.depth_horizontal_fov_deg)
+        ) / 2.0
+        aspect = float(height) / max(float(width), 1.0)
+        return 2.0 * math.atan(math.tan(half_h_fov) * aspect)
 
     def _get_observation(self) -> np.ndarray:
         self._ensure_connected()
         depth_raw_m = clean_depth(
             self.adapter.get_depth_image(),
             self.env_cfg.max_depth_meters,
+            self.env_cfg.depth_min_valid_m,
         )
         self.last_depth_raw_m = depth_raw_m.astype(np.float32)
         depth_m = resize_depth(
@@ -344,17 +564,66 @@ class XaiSacGazeboEnv(gym.Env):
         )
 
     def _is_crashed(self) -> bool:
-        return bool(np.nanmin(self.last_depth_m) < self.env_cfg.crash_distance)
+        crash_state = self.adapter.get_crash_state()
+        self.last_crash_signal_available = crash_state is not None
+
+        if crash_state is not None:
+            self.last_crash_source = "uav_crash_topic" if crash_state else None
+            self.last_crash_reason = self.adapter.get_crash_reason()
+            return bool(crash_state)
+
+        min_depth_m = self._near_depth_m()
+        altitude_m = float(self.last_state_position[2])
+        min_airborne_altitude = float(
+            self.env_cfg.depth_min_airborne_altitude
+        )
+        if (
+            min_airborne_altitude > 0.0
+            and altitude_m < min_airborne_altitude
+        ):
+            self.last_crash_source = None
+            self.last_crash_reason = (
+                f"depth_suppressed:low_altitude:altitude_m={altitude_m:.3f}<"
+                f"min_airborne_altitude_m={min_airborne_altitude:.3f} "
+                f"min_depth_m={min_depth_m:.3f}"
+            )
+            return False
+
+        depth_crash = min_depth_m < self.env_cfg.crash_distance
+        self.last_crash_source = "depth" if depth_crash else None
+        self.last_crash_reason = (
+            f"min_depth_m={min_depth_m:.3f} < "
+            f"crash_distance={self.env_cfg.crash_distance:.3f}"
+            if depth_crash
+            else ""
+        )
+        return bool(depth_crash)
+
+    def _near_depth_m(self) -> float:
+        return robust_near_depth(
+            self.last_depth_m,
+            self.env_cfg.max_depth_meters,
+            self.env_cfg.depth_min_valid_m,
+            self.env_cfg.depth_crash_percentile,
+        )
 
     def _is_outside_workspace(self, position: np.ndarray) -> bool:
-        return (
-            position[0] < self.env_cfg.workspace_x[0]
-            or position[0] > self.env_cfg.workspace_x[1]
-            or position[1] < self.env_cfg.workspace_y[0]
-            or position[1] > self.env_cfg.workspace_y[1]
-            or position[2] < self.env_cfg.workspace_z[0]
-            or position[2] > self.env_cfg.workspace_z[1]
+        return bool(self._workspace_violation(position))
+
+    def _workspace_violation(self, position: np.ndarray) -> str:
+        checks = (
+            ("x", float(position[0]), self.env_cfg.workspace_x),
+            ("y", float(position[1]), self.env_cfg.workspace_y),
+            ("z", float(position[2]), self.env_cfg.workspace_z),
         )
+        for axis, value, bounds in checks:
+            lower = float(bounds[0])
+            upper = float(bounds[1])
+            if value < lower:
+                return f"{axis}={value:.3f}<min={lower:.3f}"
+            if value > upper:
+                return f"{axis}={value:.3f}>max={upper:.3f}"
+        return ""
 
     def _info(self) -> dict[str, Any]:
         return {
@@ -371,6 +640,9 @@ class XaiSacGazeboEnv(gym.Env):
                 else None
             ),
             "last_action": self.last_action.copy(),
+            "crash_signal_available": self.last_crash_signal_available,
+            "crash_source": self.last_crash_source,
+            "crash_reason": self.last_crash_reason,
             "reward_terms": (
                 self.last_reward_terms.to_dict()
                 if self.last_reward_terms

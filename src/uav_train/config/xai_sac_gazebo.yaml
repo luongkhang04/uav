@@ -2,35 +2,47 @@ ros:
   odom_topic: /uav/odom
   imu_topic: /uav/imu
   depth_topic: /uav/camera/depth/image
+  crash_topic: /uav/crash
+  crash_reason_topic: /uav/crash_reason
   cmd_topic: /uav/cmd_vel_body
   offboard_arm_service: /uav/offboard_arm
   land_service: /uav/land
   disarm_service: /uav/disarm
+  reset_sim_service: /uav/reset_sim
   control_rate_hz: 10.0
   data_timeout_sec: 5.0
-  service_timeout_sec: 5.0
+  service_timeout_sec: 15.0
+  crash_state_timeout_sec: 1.0
   auto_arm: true
   stop_on_reset: true
+  reset_sim_on_reset: true
+  reset_sim_attempts: 3
+  reset_sim_retry_delay_sec: 0.5
+  reset_sim_required: false
   stop_on_close: true
   depth_scale: 1.0
 
 environment:
   env_name: GazeboPx4Avoid
-  start_position: [0.0, 0.0, 5.0]
+  start_position: [0.0, 0.0, 0.0]
   start_random_yaw_rad: 6.283185307179586
   goal_position: null
   goal_distance: 50.0
   goal_random_yaw_rad: 6.283185307179586
-  goal_z_offset_range: [-2.0, 2.0]
+  goal_z_range: [2.0, 5.0]
   goal_sample_attempts: 100
-  goal_collision_check: false
-  goal_clearance_m: 0.0
+  goal_collision_check: true
+  goal_clearance_m: 2.0
+  goal_min_altitude: 1.0
   workspace_x: [-70.0, 70.0]
   workspace_y: [-70.0, 70.0]
-  workspace_z: [0.0, 50.0]
+  workspace_z: [-1.0, 50.0]
   max_episode_steps: 400
   accept_radius: 2.0
   crash_distance: 1.5
+  depth_min_airborne_altitude: 0.75
+  depth_min_valid_m: 0.05
+  depth_crash_percentile: 0.5
   max_depth_meters: 15.0
   depth_image_width: 90
   depth_image_height: 60

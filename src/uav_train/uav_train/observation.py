@@ -107,9 +107,35 @@ def resize_depth(
         return depth_m[np.ix_(y_idx, x_idx)]
 
 
-def clean_depth(depth_m: np.ndarray, max_depth_m: float) -> np.ndarray:
-    depth_m = np.nan_to_num(depth_m, nan=max_depth_m, posinf=max_depth_m)
+def clean_depth(
+    depth_m: np.ndarray,
+    max_depth_m: float,
+    min_valid_m: float = 0.0,
+) -> np.ndarray:
+    depth_m = np.asarray(depth_m, dtype=np.float32).copy()
+    invalid = ~np.isfinite(depth_m)
+    if min_valid_m > 0.0:
+        invalid |= depth_m < float(min_valid_m)
+    depth_m[invalid] = float(max_depth_m)
     return np.clip(depth_m, 0.0, max_depth_m)
+
+
+def robust_near_depth(
+    depth_m: np.ndarray,
+    max_depth_m: float,
+    min_valid_m: float = 0.05,
+    percentile: float = 0.5,
+) -> float:
+    values = np.asarray(depth_m, dtype=np.float32)
+    valid = values[np.isfinite(values)]
+    valid = valid[
+        (valid >= float(min_valid_m))
+        & (valid <= float(max_depth_m))
+    ]
+    if valid.size == 0:
+        return float(max_depth_m)
+    percentile = float(np.clip(percentile, 0.0, 100.0))
+    return float(np.percentile(valid, percentile))
 
 
 def closest_depth_grid(

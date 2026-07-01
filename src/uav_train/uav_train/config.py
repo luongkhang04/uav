@@ -18,15 +18,23 @@ class RosTopicsConfig:
     odom_topic: str = "/uav/odom"
     imu_topic: str = "/uav/imu"
     depth_topic: str = "/uav/camera/depth/image"
+    crash_topic: str = "/uav/crash"
+    crash_reason_topic: str = "/uav/crash_reason"
     cmd_topic: str = "/uav/cmd_vel_body"
     offboard_arm_service: str = "/uav/offboard_arm"
     land_service: str = "/uav/land"
     disarm_service: str = "/uav/disarm"
+    reset_sim_service: str = "/uav/reset_sim"
     control_rate_hz: float = 10.0
     data_timeout_sec: float = 5.0
-    service_timeout_sec: float = 5.0
+    service_timeout_sec: float = 15.0
+    crash_state_timeout_sec: float = 1.0
     auto_arm: bool = True
     stop_on_reset: bool = True
+    reset_sim_on_reset: bool = True
+    reset_sim_attempts: int = 3
+    reset_sim_retry_delay_sec: float = 0.5
+    reset_sim_required: bool = False
     stop_on_close: bool = True
     depth_scale: float = 1.0
 
@@ -35,24 +43,29 @@ class RosTopicsConfig:
 class EnvironmentConfig:
     env_name: str = "GazeboPx4Avoid"
     start_position: list[float] = field(
-        default_factory=lambda: [0.0, 0.0, 5.0]
+        default_factory=lambda: [0.0, 0.0, 0.0]
     )
     start_random_yaw_rad: float = 6.283185307179586
     goal_position: list[float] | None = None
     goal_distance: float = 50.0
     goal_random_yaw_rad: float = 6.283185307179586
-    goal_z_offset_range: list[float] = field(
-        default_factory=lambda: [-2.0, 2.0]
+    goal_z_range: list[float] | None = field(
+        default_factory=lambda: [2.0, 5.0]
     )
+    goal_z_offset_range: list[float] | None = None
     goal_sample_attempts: int = 100
-    goal_collision_check: bool = False
-    goal_clearance_m: float = 0.0
+    goal_collision_check: bool = True
+    goal_clearance_m: float = 2.0
+    goal_min_altitude: float = 1.0
     workspace_x: list[float] = field(default_factory=lambda: [-70.0, 70.0])
     workspace_y: list[float] = field(default_factory=lambda: [-70.0, 70.0])
-    workspace_z: list[float] = field(default_factory=lambda: [0.0, 50.0])
+    workspace_z: list[float] = field(default_factory=lambda: [-1.0, 50.0])
     max_episode_steps: int = 400
     accept_radius: float = 2.0
     crash_distance: float = 1.5
+    depth_min_airborne_altitude: float = 0.75
+    depth_min_valid_m: float = 0.05
+    depth_crash_percentile: float = 0.5
     max_depth_meters: float = 15.0
     depth_image_width: int = 90
     depth_image_height: int = 60

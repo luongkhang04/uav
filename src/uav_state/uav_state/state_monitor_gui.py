@@ -14,6 +14,7 @@ from cv_bridge import CvBridge
 
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, Image
+from std_msgs.msg import Bool, Float32, String
 
 
 def yaw_from_ros_quat(q):
@@ -37,10 +38,13 @@ class StateMonitorGUI(Node):
       /uav/imu
       /uav/camera/depth/image
       /uav/camera/rgb/image
+      /uav/crash
 
-    Notes:
+    Notes
+    -----
       - Requires a display. Over SSH, use X forwarding or run locally.
       - For headless SSH without display, use `state_monitor` instead.
+
     """
 
     def __init__(self):
@@ -50,6 +54,10 @@ class StateMonitorGUI(Node):
         self.declare_parameter("imu_topic", "/uav/imu")
         self.declare_parameter("depth_topic", "/uav/camera/depth/image")
         self.declare_parameter("rgb_topic", "/uav/camera/rgb/image")
+        self.declare_parameter("crash_topic", "/uav/crash")
+        self.declare_parameter("crash_reason_topic", "/uav/crash_reason")
+        self.declare_parameter("contact_force_topic", "/uav/contact_force_n")
+        self.declare_parameter("contact_depth_topic", "/uav/contact_depth_m")
 
         self.declare_parameter("show_rgb", True)
         self.declare_parameter("show_depth", True)
@@ -60,6 +68,16 @@ class StateMonitorGUI(Node):
         self.imu_topic = self.get_parameter("imu_topic").value
         self.depth_topic = self.get_parameter("depth_topic").value
         self.rgb_topic = self.get_parameter("rgb_topic").value
+        self.crash_topic = self.get_parameter("crash_topic").value
+        self.crash_reason_topic = self.get_parameter(
+            "crash_reason_topic"
+        ).value
+        self.contact_force_topic = self.get_parameter(
+            "contact_force_topic"
+        ).value
+        self.contact_depth_topic = self.get_parameter(
+            "contact_depth_topic"
+        ).value
 
         self.show_rgb = bool(self.get_parameter("show_rgb").value)
         self.show_depth = bool(self.get_parameter("show_depth").value)
@@ -72,23 +90,50 @@ class StateMonitorGUI(Node):
         self.imu = None
         self.depth_msg = None
         self.rgb_msg = None
+        self.crash_msg = None
+        self.crash_reason = ""
+        self.contact_force_n = None
+        self.contact_depth_m = None
 
         self.odom_count = 0
         self.imu_count = 0
         self.depth_count = 0
         self.rgb_count = 0
+        self.crash_count = 0
+        self.contact_count = 0
 
         self.last_rate_time = time.time()
         self.odom_hz = 0
         self.imu_hz = 0
         self.depth_hz = 0
         self.rgb_hz = 0
+        self.crash_hz = 0
+        self.contact_hz = 0
 
         qos = qos_profile_sensor_data
 
         self.create_subscription(Odometry, self.odom_topic, self.odom_cb, qos)
         self.create_subscription(Imu, self.imu_topic, self.imu_cb, qos)
         self.create_subscription(Image, self.depth_topic, self.depth_cb, qos)
+        self.create_subscription(Bool, self.crash_topic, self.crash_cb, 10)
+        self.create_subscription(
+            String,
+            self.crash_reason_topic,
+            self.crash_reason_cb,
+            10,
+        )
+        self.create_subscription(
+            Float32,
+            self.contact_force_topic,
+            self.contact_force_cb,
+            10,
+        )
+        self.create_subscription(
+            Float32,
+            self.contact_depth_topic,
+            self.contact_depth_cb,
+            10,
+        )
 
         if self.show_rgb:
             self.create_subscription(Image, self.rgb_topic, self.rgb_cb, qos)
@@ -102,6 +147,9 @@ class StateMonitorGUI(Node):
         self.get_logger().info(f"imu  : {self.imu_topic}")
         self.get_logger().info(f"depth: {self.depth_topic}")
         self.get_logger().info(f"rgb  : {self.rgb_topic}")
+        self.get_logger().info(f"crash: {self.crash_topic}")
+        self.get_logger().info(f"contact force: {self.contact_force_topic}")
+        self.get_logger().info(f"contact depth: {self.contact_depth_topic}")
 
     def odom_cb(self, msg):
         self.odom = msg
@@ -119,6 +167,20 @@ class StateMonitorGUI(Node):
         self.rgb_msg = msg
         self.rgb_count += 1
 
+    def crash_cb(self, msg):
+        self.crash_msg = msg
+        self.crash_count += 1
+
+    def crash_reason_cb(self, msg):
+        self.crash_reason = msg.data
+
+    def contact_force_cb(self, msg):
+        self.contact_force_n = float(msg.data)
+        self.contact_count += 1
+
+    def contact_depth_cb(self, msg):
+        self.contact_depth_m = float(msg.data)
+
     def update_rates(self):
         now = time.time()
         dt = now - self.last_rate_time
@@ -128,11 +190,15 @@ class StateMonitorGUI(Node):
             self.imu_hz = self.imu_count / dt
             self.depth_hz = self.depth_count / dt
             self.rgb_hz = self.rgb_count / dt
+            self.crash_hz = self.crash_count / dt
+            self.contact_hz = self.contact_count / dt
 
             self.odom_count = 0
             self.imu_count = 0
             self.depth_count = 0
             self.rgb_count = 0
+            self.crash_count = 0
+            self.contact_count = 0
             self.last_rate_time = now
 
     def make_blank(self, title, width=640, height=360):
@@ -151,7 +217,10 @@ class StateMonitorGUI(Node):
 
     def depth_to_bgr(self, msg):
         try:
-            depth = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+            depth = self.bridge.imgmsg_to_cv2(
+                msg,
+                desired_encoding="passthrough",
+            )
         except Exception as exc:
             self.get_logger().warn(f"Failed to convert depth image: {exc}")
             return self.make_blank("Depth conversion failed")
@@ -196,8 +265,30 @@ class StateMonitorGUI(Node):
 
         lines.append(
             f"Hz odom={self.odom_hz:5.1f} imu={self.imu_hz:5.1f} "
-            f"depth={self.depth_hz:5.1f} rgb={self.rgb_hz:5.1f}"
+            f"depth={self.depth_hz:5.1f} rgb={self.rgb_hz:5.1f} "
+            f"crash={self.crash_hz:5.1f} "
+            f"contact={self.contact_hz:5.1f}"
         )
+
+        if self.crash_msg is not None:
+            state = "CRASH" if self.crash_msg.data else "ok"
+            reason = self.crash_reason or "n/a"
+            lines.append(f"crash: {state} reason={reason}")
+        else:
+            lines.append("crash: no data")
+
+        if self.contact_force_n is not None:
+            depth = (
+                self.contact_depth_m
+                if self.contact_depth_m is not None
+                else 0.0
+            )
+            lines.append(
+                f"contact: force={self.contact_force_n: .1f} N "
+                f"depth={depth: .4f} m"
+            )
+        else:
+            lines.append("contact: no data")
 
         if self.odom is not None:
             p = self.odom.pose.pose.position
@@ -209,7 +300,8 @@ class StateMonitorGUI(Node):
                 f"yaw={math.degrees(yaw): .1f} deg"
             )
             lines.append(
-                f"vel body FLU: forward={v.x: .2f} left={v.y: .2f} up={v.z: .2f}"
+                f"vel body FLU: forward={v.x: .2f} "
+                f"left={v.y: .2f} up={v.z: .2f}"
             )
         else:
             lines.append("odom: no data")
